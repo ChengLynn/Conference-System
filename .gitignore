@@ -62,3 +62,5 @@
 /**/types/auto-imports.d.ts
 # 暂时隐去大屏端代码
 /**/soms-monitor
+/**/conference.db-shm
+/**/conference.db-wal
