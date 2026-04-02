@@ -1,0 +1,64 @@
+######################################################################
+# Build Tools
+
+/**/.gradle
+/**/!gradle/wrapper/gradle-wrapper.jar
+
+/**/target/
+/**/!.mvn/wrapper/maven-wrapper.jar
+.flattened-pom.xml
+
+######################################################################
+# IDE
+
+### STS ###
+/**/.apt_generated
+/**/.classpath
+/**/.factorypath
+/**/.project
+/**/.settings
+/**/.springBeans
+
+### IntelliJ IDEA ###
+/**/.idea
+/**/*.iws
+/**/*.iml
+/**/*.ipr
+*.iml
+/**/*.flattened-pom.xml
+
+### NetBeans ###
+/**/nbproject/private/
+/**/nbbuild/
+/**/dist/
+/**/nbdist/
+/**/.nb-gradle/
+
+######################################################################
+# Others
+/**/*.log
+/**/*.xml.versionsBackup
+/**/*.swp
+
+### JRebel ###
+/**/rebel.xml
+
+/**/application-my.yaml
+
+
+# JS
+/**/node_modules
+/**/.DS_Store
+/**/dist/
+/**/file_store/*
+# /**/.vscode
+/**/dist-ssr
+/**/*.local
+/**/dist/
+# /**/*-lock.*
+/**/pnpm-debug
+/**/soms-ui-desktop/
+/**/types/auto-components.d.ts
+/**/types/auto-imports.d.ts
+# 暂时隐去大屏端代码
+/**/soms-monitor
