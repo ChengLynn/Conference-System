@@ -134,6 +134,22 @@ class Database {
         )
       `);
 
+      // 创建用户表
+      await this.db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          full_name TEXT,
+          phone TEXT,
+          status TEXT CHECK(status IN ('active', 'inactive', 'suspended')) DEFAULT 'active',
+          last_login DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
       // 创建索引
       await this.db.run('CREATE INDEX IF NOT EXISTS idx_admins_username ON admins(username)');
       await this.db.run('CREATE INDEX IF NOT EXISTS idx_conferences_status ON conferences(status)');
@@ -141,6 +157,9 @@ class Database {
       await this.db.run('CREATE INDEX IF NOT EXISTS idx_attendees_conference_id ON attendees(conference_id)');
       await this.db.run('CREATE INDEX IF NOT EXISTS idx_attendees_email ON attendees(email)');
       await this.db.run('CREATE INDEX IF NOT EXISTS idx_images_conference_id ON images(conference_id)');
+      await this.db.run('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+      await this.db.run('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
+      await this.db.run('CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)');
 
       logger.info('✅ Database tables initialized successfully');
 
