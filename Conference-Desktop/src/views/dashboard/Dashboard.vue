@@ -183,51 +183,40 @@
         <div class="header">
           <div class="header-left">
             <div class="logo">
-              <el-icon :size="28" color="#409EFF">
-                <Platform />
-              </el-icon>
-              <span class="logo-text">海运圈会务管理系统</span>
-            </div>
-
-            <!-- 搜索框 -->
-            <div class="search-box">
-              <el-input
-                v-model="searchQuery"
-                placeholder="搜索会议名称、编号或关键词..."
-                clearable
-                @keyup.enter="handleSearch"
-              >
-                <template #append>
-                  <el-button @click="handleSearch">
-                    <el-icon><Search /></el-icon>
-                    搜索
-                  </el-button>
-                </template>
-              </el-input>
+              <span class="brand-name">海运圈会务管理系统</span>
             </div>
           </div>
 
           <div class="header-right">
-            <div class="user-actions">
-              <el-dropdown trigger="click">
-                <span class="user-info">
-                  <el-avatar :size="36" :src="userInfo.avatar" />
-                  <span class="username">{{ userInfo.username }}</span>
-                  <el-icon><ArrowDown /></el-icon>
-                </span>
+            <div class="header-actions">
+              <!-- 刷新按钮 -->
+              <el-button link @click="handleRefresh">
+                <el-icon :size="20" color="#666">
+                  <RefreshRight />
+                </el-icon>
+              </el-button>
+
+              <!-- 通知图标 -->
+              <el-badge :value="3" class="notification-badge">
+                <el-button link>
+                  <el-icon :size="20" color="#666">
+                    <Bell />
+                  </el-icon>
+                </el-button>
+              </el-badge>
+
+              <!-- 用户信息 -->
+              <el-dropdown @command="handleUserCommand" trigger="click">
+                <div class="user-display">
+                  <el-avatar :size="32" :src="userInfo.avatar" />
+                  <span class="user-name">{{ userInfo.username }}</span>
+                  <el-icon class="dropdown-arrow"><ArrowDown /></el-icon>
+                </div>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item @click="handleProfile">
-                      <el-icon><User /></el-icon>
-                      个人中心
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="handleSettings">
-                      <el-icon><Setting /></el-icon>
-                      系统设置
-                    </el-dropdown-item>
-                    <el-dropdown-item divided @click="handleLogout">
+                    <el-dropdown-item command="logout">
                       <el-icon><SwitchButton /></el-icon>
-                      退出登录
+                      <span>退出登录</span>
                     </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -254,14 +243,14 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import {
-  Search,
+  RefreshRight,
   User,
   Setting,
   SwitchButton,
   ArrowDown,
   Calendar,
   Document,
-  ChatDotRound,
+  Bell,
   Odometer,
   DataAnalysis,
   Finished,
@@ -369,8 +358,8 @@ const particlesOptions = {
 
 // 用户信息
 const userInfo = reactive({
-  username: '管理员',
-  email: 'admin@bho.com',
+  username: 'Iris',
+  email: 'iris@bho.com',
   avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
 })
 
@@ -380,6 +369,17 @@ const searchQuery = ref('')
 // 方法
 const handleSearch = () => {
   console.log('搜索:', searchQuery.value)
+}
+
+const handleRefresh = () => {
+  console.log('刷新页面')
+  location.reload()
+}
+
+const handleUserCommand = (command: string) => {
+  if (command === 'logout') {
+    handleLogout()
+  }
 }
 
 const handleMenuSelect = (index: string) => {
@@ -449,55 +449,52 @@ const handleLogout = () => {
   gap: 12px;
 }
 
-.logo-text {
-  left: 233px;
-  top: 11px;
-  width: 234px;
-  height: 35px;
-  opacity: 1;
-  font-size: 24px;
+.brand-name {
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: 2px;
-  line-height: 34.75px;
-  color: rgba(0, 88, 162, 1);
-  text-align: center;
-  vertical-align: top;
+  color: #005892;
+  letter-spacing: 1px;
 }
 
-.search-box {
-  width: 400px;
+.header-right .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
 }
 
-.search-box :deep(.el-input-group__append) {
-  background-color: #409eff;
-  border-color: #409eff;
+.header-right .header-actions .el-button {
+  padding: 0;
+  margin: 0;
 }
 
-.search-box :deep(.el-input-group__append .el-button) {
-  color: white;
+.header-right .header-actions .notification-badge {
+  cursor: pointer;
 }
 
-.search-box :deep(.el-input-group__append .el-button:hover) {
-  background-color: #66b1ff;
-}
-
-.header-right .user-actions .user-info {
+.header-right .header-actions .user-display {
   display: flex;
   align-items: center;
   gap: 10px;
-  cursor: pointer;
-  padding: 8px 12px;
+  padding: 8px 16px;
   border-radius: 20px;
+  cursor: pointer;
   transition: all 0.3s;
 }
 
-.header-right .user-actions .user-info:hover {
+.header-right .header-actions .user-display:hover {
   background-color: #f5f5f5;
 }
 
-.header-right .user-actions .user-info .username {
-  font-weight: 400;
+.header-right .header-actions .user-display .user-name {
+  font-weight: 500;
   color: #333;
+  font-size: 14px;
+}
+
+.header-right .header-actions .user-display .dropdown-arrow {
+  font-size: 14px;
+  color: #666;
+  transition: transform 0.3s;
 }
 
 /* 主要内容区域 */
