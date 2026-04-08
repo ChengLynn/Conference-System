@@ -54,83 +54,93 @@
           </div>
         </div>
 
-        <!-- 时间轴 + 议程卡片区域 -->
-        <div class="timeline-container">
-          <div v-for="(item, index) in agendaList" :key="index" class="timeline-item">
-            <!-- 时间轴左侧 -->
-            <div class="timeline-left">
-              <div class="timeline-dot" :class="getDotClass(item.stage)"></div>
-              <div v-if="index < agendaList.length - 1" class="timeline-line"></div>
-            </div>
+        <!-- 中央垂直时间轴布局 -->
+        <div class="vertical-timeline-wrapper">
+          <!-- 中央竖线 -->
+          <div class="timeline-center-line"></div>
 
-            <!-- 时间文本 -->
-            <div class="timeline-time">{{ item.startTime }} - {{ item.endTime }}</div>
-
-            <!-- 议程卡片 -->
-            <div class="agenda-card">
-              <div class="card-header">
-                <div class="card-header-left">
-                  <span class="stage-tag" :class="getTagClass(item.stage)">
-                    {{ item.stage }}
-                  </span>
-                  <span class="card-title">{{ item.topic }}</span>
-                </div>
-                <div class="card-actions">
-                  <el-button
-                    type="text"
-                    size="small"
-                    class="action-edit"
-                    @click="handleEditAgenda(item)"
-                  >
-                    <el-icon><Edit /></el-icon> 编辑
-                  </el-button>
-                  <el-button
-                    type="text"
-                    size="small"
-                    class="action-delete"
-                    @click="handleDeleteAgenda(item)"
-                  >
-                    <el-icon><Delete /></el-icon> 删除
-                  </el-button>
-                </div>
+          <!-- 议程列表 -->
+          <div class="timeline-items">
+            <div v-for="(item, index) in agendaList" :key="index" class="timeline-row">
+              <!-- 圆点（对齐中轴线） -->
+              <div class="timeline-dot-wrapper">
+                <div class="timeline-dot" :class="getDotClass(item.stage)"></div>
               </div>
-              <div class="card-content">
-                <template v-if="item.speakers && item.speakers.length">
-                  <div class="content-line">
-                    <span class="content-label">演讲嘉宾：</span>
-                    <span class="content-text">{{ item.speakers.join('；') }}</span>
+
+              <!-- 议程卡片（统一在右侧） -->
+              <div class="agenda-card">
+                <!-- 卡片左上角显示时间段 -->
+                <div class="card-time">{{ item.startTime }} - {{ item.endTime }}</div>
+
+                <div class="card-header">
+                  <div class="card-header-left">
+                    <span class="stage-tag" :class="getTagClass(item.stage)">
+                      {{ item.stage }}
+                    </span>
+                    <span class="card-title">{{ item.topic }}</span>
                   </div>
-                </template>
-                <template v-if="item.host">
-                  <div class="content-line">
-                    <span class="content-label">主持人：</span>
-                    <span class="content-text">{{ item.host }}</span>
+                  <div class="card-actions">
+                    <el-button
+                      type="text"
+                      size="small"
+                      class="action-edit"
+                      @click="handleEditAgenda(item)"
+                    >
+                      <el-icon><Edit /></el-icon> 编辑
+                    </el-button>
+                    <el-button
+                      type="text"
+                      size="small"
+                      class="action-delete"
+                      @click="handleDeleteAgenda(item)"
+                    >
+                      <el-icon><Delete /></el-icon> 删除
+                    </el-button>
                   </div>
-                </template>
-                <template v-if="item.guests && item.guests.length">
-                  <div class="content-line">
-                    <span class="content-label">对话嘉宾：</span>
-                    <span class="content-text">{{ formatGuests(item.guests) }}</span>
-                  </div>
-                </template>
-                <template v-if="item.speakerDetails && item.speakerDetails.length">
-                  <div v-for="(detail, idx) in item.speakerDetails" :key="idx" class="content-line">
-                    <span class="content-text">{{ detail }}</span>
-                  </div>
-                </template>
+                </div>
+
+                <div class="card-content">
+                  <template v-if="item.speakers && item.speakers.length">
+                    <div class="content-line">
+                      <span class="content-label">演讲嘉宾：</span>
+                      <span class="content-text">{{ item.speakers.join('；') }}</span>
+                    </div>
+                  </template>
+                  <template v-if="item.host">
+                    <div class="content-line">
+                      <span class="content-label">主持人：</span>
+                      <span class="content-text">{{ item.host }}</span>
+                    </div>
+                  </template>
+                  <template v-if="item.guests && item.guests.length">
+                    <div class="content-line">
+                      <span class="content-label">对话嘉宾：</span>
+                      <span class="content-text">{{ formatGuests(item.guests) }}</span>
+                    </div>
+                  </template>
+                  <template v-if="item.speakerDetails && item.speakerDetails.length">
+                    <div
+                      v-for="(detail, idx) in item.speakerDetails"
+                      :key="idx"
+                      class="content-line"
+                    >
+                      <span class="content-text">{{ detail }}</span>
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- 空状态 -->
-        <div v-if="agendaList.length === 0" class="empty-agenda">
-          <el-empty description="暂无议程，请点击新建会议" :image-size="80" />
+          <!-- 空状态 -->
+          <div v-if="agendaList.length === 0" class="empty-agenda">
+            <el-empty description="暂无议程，请点击新建会议" :image-size="80" />
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 新增/编辑议程弹窗 - 按照图片样式修改 -->
+    <!-- 新增/编辑议程弹窗 -->
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
@@ -139,7 +149,7 @@
       :close-on-click-modal="false"
     >
       <div class="dialog-content">
-        <!-- 基础信息区 - 双列+单列布局 -->
+        <!-- 基础信息区 -->
         <div class="form-section">
           <div class="form-row two-columns">
             <div class="form-item required">
@@ -201,7 +211,7 @@
           </div>
         </div>
 
-        <!-- 嘉宾模块 - 动态可扩展区 -->
+        <!-- 嘉宾模块 -->
         <div class="guest-section">
           <div class="guest-header">
             <span class="guest-title">嘉宾</span>
@@ -355,7 +365,7 @@ const agendaList = ref<AgendaItem[]>([
     topic: '开幕致辞',
     speakerDetails: [
       '致辞嘉宾：王远航（海港能源科技有限公司/董事长）',
-      '特定（上海国际航运发展促进协会领导致欢迎辞/处长）',
+      '待定（上海国际航运发展促进协会领导致欢迎辞/处长）',
       '待定（上海组合港管理委员会办公室领导致辞）',
       '待定（中国船东协会会长致辞/会长）',
       '待定（浦东新区商务委（航运办）领导致辞）',
@@ -662,7 +672,7 @@ const saveAgenda = () => {
   color: #f53f3f;
 }
 
-/* ========== 议程安排样式 - 时间轴布局 ========== */
+/* ========== 中央垂直时间轴布局 ========== */
 .agenda-section {
   padding: 0;
 }
@@ -722,42 +732,67 @@ const saveAgenda = () => {
   color: #ffffff;
 }
 
-/* 时间轴容器 */
-.timeline-container {
-  padding: 24px;
+/* 中央垂直时间轴包装器 */
+.vertical-timeline-wrapper {
+  position: relative;
+  padding: 24px 0 24px 0;
 }
 
-/* 时间轴单项 */
-.timeline-item {
-  display: flex;
-  align-items: flex-start;
+/* 中央竖线 */
+.timeline-center-line {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e5e7eb;
+  z-index: 0;
+}
+
+/* 议程列表容器 */
+.timeline-items {
   position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* 每一行议程项 */
+.timeline-row {
+  position: relative;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 48px;
+}
+
+.timeline-row:last-child {
   margin-bottom: 0;
 }
 
-/* 左侧时间轴区域 */
-.timeline-left {
-  position: relative;
+/* 圆点容器 - 用于对齐中轴线 */
+.timeline-dot-wrapper {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   width: 24px;
-  flex-shrink: 0;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  justify-content: center;
+  z-index: 2;
 }
 
-/* 时间轴圆点 */
+/* 圆点样式 */
 .timeline-dot {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 8px;
-  z-index: 1;
+  background: #d1d5db;
+  box-shadow: 0 0 0 3px white;
 }
 
-/* 圆点颜色 */
 .dot-gray {
-  background: #d1d5db;
+  background: #9ca3af;
 }
 .dot-orange {
   background: #f97316;
@@ -769,40 +804,34 @@ const saveAgenda = () => {
   background: #22c55e;
 }
 
-/* 时间轴连线 */
-.timeline-line {
-  position: absolute;
-  top: 20px;
-  width: 2px;
-  height: calc(100% + 40px);
-  background: #e5e7eb;
-}
-
-/* 时间文本 */
-.timeline-time {
-  width: 100px;
-  flex-shrink: 0;
-  font-size: 14px;
-  color: #6b7280;
-  padding-left: 16px;
-  padding-top: 6px;
-  line-height: 1.4;
-}
-
-/* 议程卡片 */
+/* 议程卡片 - 统一在右侧 */
 .agenda-card {
-  flex: 1;
-  margin-left: 24px;
-  margin-bottom: 24px;
+  width: calc(50% - 40px);
+  margin-left: calc(50% + 20px);
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 16px 20px;
   transition: box-shadow 0.2s;
+  position: relative;
 }
 
 .agenda-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 卡片左上角时间 */
+.card-time {
+  position: absolute;
+  top: -24px;
+  left: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  background: #f5f7fa;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
 }
 
 /* 卡片头部 */
@@ -909,17 +938,7 @@ const saveAgenda = () => {
   text-align: center;
 }
 
-/* 最后一个卡片底部无边距 */
-.timeline-item:last-child .agenda-card {
-  margin-bottom: 0;
-}
-
-/* 最后一个时间轴连线隐藏 */
-.timeline-item:last-child .timeline-line {
-  display: none;
-}
-
-/* ========== 弹窗样式 - 按图片设计 ========== */
+/* ========== 弹窗样式 ========== */
 .agenda-dialog :deep(.el-dialog) {
   border-radius: 12px;
   background: #f5f7fa;

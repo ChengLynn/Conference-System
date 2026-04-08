@@ -190,33 +190,29 @@
           <div class="header-right">
             <div class="header-actions">
               <!-- 刷新按钮 -->
-              <el-button link @click="handleRefresh">
-                <el-icon :size="20" color="#666">
-                  <RefreshRight />
-                </el-icon>
+              <el-button type="text" @click="handleRefresh" class="icon-button">
+                <el-icon><RefreshRight /></el-icon>
               </el-button>
 
               <!-- 通知图标 -->
               <el-badge :value="3" class="notification-badge">
-                <el-button link>
-                  <el-icon :size="20" color="#666">
-                    <Bell />
-                  </el-icon>
+                <el-button type="text" class="icon-button">
+                  <el-icon><Bell /></el-icon>
                 </el-button>
               </el-badge>
 
               <!-- 用户信息 -->
               <el-dropdown @command="handleUserCommand" trigger="click">
-                <div class="user-display">
+                <div class="user-dropdown">
                   <el-avatar :size="32" :src="userInfo.avatar" />
-                  <span class="user-name">{{ userInfo.username }}</span>
-                  <el-icon class="dropdown-arrow"><ArrowDown /></el-icon>
+                  <div class="user-name">{{ userInfo.username }}</div>
+                  <el-icon><ArrowDown /></el-icon>
                 </div>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="logout">
                       <el-icon><SwitchButton /></el-icon>
-                      <span>退出登录</span>
+                      退出登录
                     </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -226,13 +222,6 @@
         </div>
         <!-- 路由出口，显示子路由组件 -->
         <router-view></router-view>
-      </div>
-    </div>
-
-    <!-- 底部信息栏 -->
-    <div class="footer">
-      <div class="footer-content">
-        <span>海运圈会务系统（MarineCircle）© 2026</span>
       </div>
     </div>
   </div>
@@ -455,7 +444,15 @@ const handleLogout = () => {
   color: #005892;
   letter-spacing: 1px;
 }
-
+.user-dropdown {
+  display: flex;
+  justify-self: start;
+  align-items: center;
+}
+.user-name {
+  padding-left: 10px;
+  padding-right: 10px;
+}
 .header-right .header-actions {
   display: flex;
   align-items: center;
@@ -703,6 +700,224 @@ const handleLogout = () => {
 
 .footer .footer-content span {
   padding: 0 10px;
+}
+
+/* 滚动条样式 - 保持不变 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(45deg, #409eff, #b37feb);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, #66b1ff, #c4a5f3);
+}
+
+.header-right .header-actions .user-display .user-name {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.header-right .header-actions .user-display .dropdown-arrow {
+  font-size: 14px;
+  color: #666;
+  transition: transform 0.3s;
+}
+
+/* 主要内容区域 */
+.main-content {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  /* margin: 1px; */
+  gap: 1px;
+}
+
+/* ===== 左侧导航栏 - 完全按照图片样式修改 ===== */
+.left-sidebar {
+  width: 240px;
+  background: rgba(1, 81, 145, 1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* 侧边栏头部 */
+.sidebar-header {
+  padding: 20px 16px 16px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.system-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  line-height: 1.4;
+  letter-spacing: 1px;
+}
+
+.system-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.4;
+}
+
+/* 侧边栏菜单 */
+.sidebar-menu {
+  flex: 1;
+  border-right: none;
+  background: transparent;
+  /* padding: 8px 0; */
+}
+
+/* 菜单项样式 */
+.sidebar-menu :deep(.el-menu-item) {
+  height: 48px;
+  line-height: 48px;
+  padding: 0 16px;
+  margin: 4px 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 400;
+  border-left: 3px solid transparent;
+  transition: all 0.3s;
+}
+
+/* 菜单图标样式 */
+.sidebar-menu :deep(.el-menu-item .el-icon) {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 18px;
+  margin-right: 12px;
+  width: 20px;
+  text-align: center;
+}
+
+/* 悬停效果 */
+.sidebar-menu :deep(.el-menu-item:hover) {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.sidebar-menu :deep(.el-menu-item:hover .el-icon) {
+  color: white;
+}
+
+/* 激活状态 */
+.sidebar-menu :deep(.el-menu-item.is-active) {
+  background: linear-gradient(90deg, rgba(64, 158, 255, 0.2) 0%, transparent 100%);
+  color: #409eff;
+  border-left-color: #409eff;
+}
+
+.sidebar-menu :deep(.el-menu-item.is-active .el-icon) {
+  color: #409eff;
+}
+
+/* 子菜单标题样式 */
+.sidebar-menu :deep(.el-sub-menu__title) {
+  height: 48px;
+  line-height: 48px;
+  padding: 0 16px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 400;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-menu :deep(.el-sub-menu__title .el-icon) {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 18px;
+  margin-right: 12px;
+  width: 20px;
+  text-align: center;
+}
+
+.sidebar-menu :deep(.el-sub-menu__title:hover) {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.sidebar-menu :deep(.el-sub-menu__title:hover .el-icon) {
+  color: white;
+}
+
+/* 子菜单项样式 */
+.sidebar-menu :deep(.el-menu--inline) {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-menu :deep(.el-menu--inline .el-menu-item) {
+  padding-left: 52px !important;
+  font-size: 13px;
+  height: 40px;
+  line-height: 40px;
+  margin: 2px 0;
+}
+
+/* 子菜单激活状态 */
+.sidebar-menu :deep(.el-menu--inline .el-menu-item.is-active) {
+  background: rgba(64, 158, 255, 0.1);
+  color: #409eff;
+}
+
+/* 展开/折叠图标 */
+.sidebar-menu :deep(.el-sub-menu .el-sub-menu__icon-arrow) {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  right: 16px;
+}
+
+.sidebar-menu :deep(.el-sub-menu.is-active .el-sub-menu__title) {
+  color: white;
+}
+
+.sidebar-menu :deep(.el-sub-menu.is-active .el-sub-menu__title .el-icon) {
+  color: #409eff;
+}
+
+/* 自定义左侧导航栏滚动条 */
+.left-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.left-sidebar::-webkit-scrollbar-track {
+  background: #001529;
+}
+
+.left-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.left-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 右侧内容区域 - 保持不变 */
+.right-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  padding: 1px;
+  overflow: hidden;
 }
 
 /* 滚动条样式 - 保持不变 */

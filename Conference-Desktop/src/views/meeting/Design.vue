@@ -1,5 +1,12 @@
 <template>
   <div class="design-container">
+    <!-- 通用导航组件 -->
+    <ConferenceNavigation
+      :currentPage="'设计'"
+      :meetings="meetings"
+      @meeting-change="handleMeetingChange"
+    />
+
     <!-- 视图切换 tabs -->
     <div class="view-tabs">
       <div class="tab-item" :class="{ active: currentView === 'list' }" @click="switchView('list')">
@@ -241,6 +248,37 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Delete, Plus, View, Printer, Link, Clock } from '@element-plus/icons-vue'
 
 import type { ConferenceItem } from '@/types/conference'
+import ConferenceNavigation from '@/components/ConferenceNavigation.vue'
+
+// 会议数据
+const meetings = ref([
+  {
+    id: 1,
+    name: '2025第六届上海国际船舶管理论坛',
+    status: '报名中',
+  },
+  {
+    id: 2,
+    name: '普陀区航运服务集聚区 - 暨港航物流和海事服务产业链合作交流会',
+    status: '进行中',
+  },
+  {
+    id: 3,
+    name: '2025世界油商大会',
+    status: '已结束',
+  },
+  {
+    id: 4,
+    name: '2025散杂货船舶投资和经营论坛',
+    status: '已结束',
+  },
+])
+
+const selectedMeetingId = ref<number>(1)
+
+const handleMeetingChange = (meetingId: number) => {
+  selectedMeetingId.value = meetingId
+}
 // 视图切换
 const currentView = ref<'list' | 'detail'>('list')
 // 搜索关键词
