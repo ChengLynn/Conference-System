@@ -113,9 +113,7 @@
                 <el-table-column prop="contact" label="联系人" width="120" />
                 <el-table-column label="操作" width="80">
                   <template #default="{ row }">
-                    <el-button type="text" size="small" @click="handleViewSponsor(row)"
-                      >查看</el-button
-                    >
+                    <el-button link size="small" @click="handleViewSponsor(row)">查看</el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -157,9 +155,7 @@
                 </el-table-column>
                 <el-table-column label="操作" width="80">
                   <template #default="{ row }">
-                    <el-button type="text" size="small" @click="handleViewSpeaker(row)"
-                      >详情</el-button
-                    >
+                    <el-button link size="small" @click="handleViewSpeaker(row)">详情</el-button>
                   </template>
                 </el-table-column>
               </el-table>

@@ -1,13 +1,13 @@
 <template>
   <div class="agenda-page">
-    <div class="content-card">
-      <!-- 通用导航组件 -->
-      <ConferenceNavigation
-        :currentPage="'议程安排'"
-        :meetings="meetings"
-        @meeting-change="handleMeetingChange"
-      />
+    <!-- 通用导航组件 -->
+    <ConferenceNavigation
+      :currentPage="'议程安排'"
+      :meetings="meetings"
+      @meeting-change="handleMeetingChange"
+    />
 
+    <div class="content-card">
       <!-- 会议管理列表区域（初始显示） -->
       <div v-if="!showAgendaView" class="table-section">
         <div class="section-header">
@@ -25,13 +25,13 @@
           </el-table-column>
           <el-table-column label="操作" width="320" align="center">
             <template #default="{ row }">
-              <el-button type="text" size="small" class="btn-edit" @click="handleEdit(row)">
+              <el-button link size="small" class="btn-edit" @click="handleEdit(row)">
                 <el-icon><Edit /></el-icon> 编辑
               </el-button>
-              <el-button type="text" size="small" class="btn-switch" @click="handleToggle(row)">
+              <el-button link size="small" class="btn-switch" @click="handleToggle(row)">
                 <el-icon><DataAnalysis /></el-icon> 切换
               </el-button>
-              <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">
+              <el-button link size="small" class="btn-delete" @click="handleDelete(row)">
                 <el-icon><Delete /></el-icon> 删除
               </el-button>
             </template>
@@ -54,92 +54,110 @@
           </div>
         </div>
 
-        <!-- 时间轴 + 议程卡片区域 -->
-        <div class="timeline-container">
-          <div v-for="(item, index) in agendaList" :key="index" class="timeline-item">
-            <!-- 时间轴左侧 -->
-            <div class="timeline-left">
-              <div class="timeline-dot" :class="getDotClass(item.stage)"></div>
-              <div v-if="index < agendaList.length - 1" class="timeline-line"></div>
-            </div>
-
-            <!-- 时间文本 -->
-            <div class="timeline-time">{{ item.startTime }} - {{ item.endTime }}</div>
-
-            <!-- 议程卡片 -->
-            <div class="agenda-card">
-              <div class="card-header">
-                <div class="card-header-left">
-                  <span class="stage-tag" :class="getTagClass(item.stage)">
-                    {{ item.stage }}
-                  </span>
-                  <span class="card-title">{{ item.topic }}</span>
-                </div>
-                <div class="card-actions">
-                  <el-button
-                    type="text"
-                    size="small"
-                    class="action-edit"
-                    @click="handleEditAgenda(item)"
-                  >
-                    <el-icon><Edit /></el-icon> 编辑
-                  </el-button>
-                  <el-button
-                    type="text"
-                    size="small"
-                    class="action-delete"
-                    @click="handleDeleteAgenda(item)"
-                  >
-                    <el-icon><Delete /></el-icon> 删除
-                  </el-button>
-                </div>
+        <!-- 垂直时间轴布局 - 卡片式 -->
+        <div class="vertical-timeline-wrapper">
+          <!-- 议程列表 -->
+          <div class="timeline-items">
+            <div v-for="(item, index) in agendaList" :key="index" class="timeline-row">
+              <!-- 左侧圆点连线区域 -->
+              <div class="timeline-left">
+                <div class="timeline-dot" :class="getDotClass(item.stage)"></div>
+                <div class="timeline-line" v-if="index < agendaList.length - 1"></div>
               </div>
-              <div class="card-content">
-                <template v-if="item.speakers && item.speakers.length">
-                  <div class="content-line">
-                    <span class="content-label">演讲嘉宾：</span>
-                    <span class="content-text">{{ item.speakers.join('；') }}</span>
+
+              <!-- 议程卡片 -->
+              <div class="agenda-card">
+                <!-- 卡片顶部：时间 -->
+                <div class="card-time">{{ item.startTime }} - {{ item.endTime }}</div>
+
+                <div class="card-header">
+                  <div class="card-header-left">
+                    <span class="stage-tag" :class="getTagClass(item.stage)">
+                      {{ item.stage }}
+                    </span>
+                    <span class="card-title">{{ item.topic }}</span>
                   </div>
-                </template>
-                <template v-if="item.host">
-                  <div class="content-line">
-                    <span class="content-label">主持人：</span>
-                    <span class="content-text">{{ item.host }}</span>
+                  <div class="card-actions">
+                    <el-button
+                      type="text"
+                      size="small"
+                      class="action-edit"
+                      @click="handleEditAgenda(item)"
+                    >
+                      <el-icon><Edit /></el-icon> 编辑
+                    </el-button>
+                    <el-button
+                      type="text"
+                      size="small"
+                      class="action-delete"
+                      @click="handleDeleteAgenda(item)"
+                    >
+                      <el-icon><Delete /></el-icon> 删除
+                    </el-button>
                   </div>
-                </template>
-                <template v-if="item.guests && item.guests.length">
-                  <div class="content-line">
-                    <span class="content-label">对话嘉宾：</span>
-                    <span class="content-text">{{ formatGuests(item.guests) }}</span>
-                  </div>
-                </template>
-                <template v-if="item.speakerDetails && item.speakerDetails.length">
-                  <div v-for="(detail, idx) in item.speakerDetails" :key="idx" class="content-line">
-                    <span class="content-text">{{ detail }}</span>
-                  </div>
-                </template>
+                </div>
+
+                <div class="card-content">
+                  <!-- 致辞嘉宾（开幕致辞） -->
+                  <template
+                    v-if="
+                      item.speakerDetails && item.speakerDetails.length && item.stage === '开幕致辞'
+                    "
+                  >
+                    <div
+                      v-for="(detail, idx) in item.speakerDetails"
+                      :key="idx"
+                      class="content-line"
+                    >
+                      <span class="content-text">{{ detail }}</span>
+                    </div>
+                  </template>
+
+                  <!-- 演讲嘉宾（主题演讲/专题演讲） -->
+                  <template v-if="item.speakers && item.speakers.length">
+                    <div class="content-line">
+                      <span class="content-label">演讲嘉宾：</span>
+                      <span class="content-text">{{ item.speakers.join('；') }}</span>
+                    </div>
+                  </template>
+
+                  <!-- 主持人 -->
+                  <template v-if="item.host">
+                    <div class="content-line">
+                      <span class="content-label">主持人：</span>
+                      <span class="content-text">{{ item.host }}</span>
+                    </div>
+                  </template>
+
+                  <!-- 对话嘉宾（圆桌讨论） -->
+                  <template v-if="item.guests && item.guests.length">
+                    <div class="content-line">
+                      <span class="content-label">对话嘉宾：</span>
+                      <span class="content-text">{{ formatGuests(item.guests) }}</span>
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- 空状态 -->
-        <div v-if="agendaList.length === 0" class="empty-agenda">
-          <el-empty description="暂无议程，请点击新建会议" :image-size="80" />
+          <!-- 空状态 -->
+          <div v-if="agendaList.length === 0" class="empty-agenda">
+            <el-empty description="暂无议程，请点击新建会议" :image-size="80" />
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 新增/编辑议程弹窗 - 按照图片样式修改 -->
+    <!-- 新增/编辑议程弹窗 -->
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="880px"
+      width="760px"
       class="agenda-dialog"
       :close-on-click-modal="false"
     >
       <div class="dialog-content">
-        <!-- 基础信息区 - 双列+单列布局 -->
         <div class="form-section">
           <div class="form-row two-columns">
             <div class="form-item required">
@@ -149,18 +167,20 @@
                 format="HH:mm"
                 value-format="HH:mm"
                 placeholder="开始时间"
-                class="form-input"
+                size="medium"
+                class="form-input time-picker"
                 prefix-icon="Clock"
               />
             </div>
             <div class="form-item required">
               <div class="form-label">结束时间</div>
               <el-time-picker
+                size="medium"
                 v-model="agendaForm.endTime"
                 format="HH:mm"
                 value-format="HH:mm"
                 placeholder="结束时间"
-                class="form-input"
+                class="form-input time-picker"
                 prefix-icon="Clock"
               />
             </div>
@@ -175,6 +195,7 @@
                 allow-create
                 filterable
                 class="form-input"
+                @change="handleStageChange"
               >
                 <el-option label="签到入场" value="签到入场" />
                 <el-option label="开幕致辞" value="开幕致辞" />
@@ -187,7 +208,8 @@
             </div>
           </div>
 
-          <div class="form-row">
+          <!-- 议题输入框 - 只在特定阶段显示 -->
+          <div class="form-row" v-if="shouldShowTopicInput">
             <div class="form-item full-width">
               <div class="form-label">议题</div>
               <el-input
@@ -201,55 +223,126 @@
           </div>
         </div>
 
-        <!-- 嘉宾模块 - 动态可扩展区 -->
         <div class="guest-section">
           <div class="guest-header">
-            <span class="guest-title">嘉宾</span>
+            <span class="guest-title">{{ guestLabel }}</span>
             <el-button type="primary" link class="add-guest-btn" @click="addGuest">
               <el-icon><Plus /></el-icon> 添加人物
             </el-button>
           </div>
 
-          <div v-for="(guest, guestIdx) in agendaForm.guests" :key="guestIdx" class="guest-card">
-            <div class="guest-card-header">
-              <el-input v-model="guest.name" placeholder="姓名" class="guest-name-input" />
-              <el-button type="danger" link class="remove-guest-btn" @click="removeGuest(guestIdx)">
-                <el-icon><Delete /></el-icon> 移除
-              </el-button>
+          <!-- 开幕致辞：致辞嘉宾列表（文本形式） -->
+          <div v-if="agendaForm.stage === '开幕致辞'" class="speaker-details-section">
+            <div
+              v-for="(detail, detailIdx) in agendaForm.speakerDetails"
+              :key="detailIdx"
+              class="speaker-detail-item"
+            >
+              <div class="speaker-detail-row">
+                <el-input
+                  v-model="agendaForm.speakerDetails[detailIdx]"
+                  placeholder="例如：王远航（海港能源科技有限公司/董事长）"
+                  class="speaker-detail-input"
+                />
+                <el-button
+                  type="danger"
+                  link
+                  class="remove-detail-btn"
+                  @click="removeSpeakerDetail(detailIdx)"
+                >
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </div>
             </div>
+            <el-button type="primary" link class="add-detail-btn" @click="addSpeakerDetail">
+              <el-icon><Plus /></el-icon> 添加致辞嘉宾
+            </el-button>
+          </div>
 
-            <div class="guest-company-list">
-              <div
-                v-for="(company, compIdx) in guest.companies"
-                :key="compIdx"
-                class="guest-company-item"
-              >
-                <div class="company-row two-columns">
-                  <el-input
-                    v-model="company.department"
-                    placeholder="公司部门"
-                    class="company-input"
-                  />
-                  <div class="position-wrapper">
+          <!-- 主题演讲/专题论坛：演讲嘉宾 -->
+          <div
+            v-else-if="agendaForm.stage === '主题演讲' || agendaForm.stage === '专题论坛'"
+            class="speaker-section"
+          >
+            <div
+              v-for="(speaker, speakerIdx) in agendaForm.speakers"
+              :key="speakerIdx"
+              class="speaker-item"
+            >
+              <div class="speaker-row">
+                <el-input
+                  v-model="agendaForm.speakers[speakerIdx]"
+                  placeholder="例如：徐祖远（交通运输部原副部长）"
+                  class="speaker-input"
+                />
+                <el-button
+                  type="danger"
+                  link
+                  class="remove-speaker-btn"
+                  @click="removeSpeaker(speakerIdx)"
+                >
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </div>
+            </div>
+            <el-button type="primary" link class="add-speaker-btn" @click="addSpeaker">
+              <el-icon><Plus /></el-icon> 添加演讲嘉宾
+            </el-button>
+          </div>
+
+          <!-- 圆桌讨论：对话嘉宾（带公司/职务） -->
+          <div v-else-if="agendaForm.stage === '圆桌讨论'">
+            <div v-for="(guest, guestIdx) in agendaForm.guests" :key="guestIdx" class="guest-card">
+              <div class="guest-card-header">
+                <el-input v-model="guest.name" placeholder="姓名" class="guest-name-input" />
+                <el-button
+                  type="danger"
+                  link
+                  class="remove-guest-btn"
+                  @click="removeGuest(guestIdx)"
+                >
+                  <el-icon><Delete /></el-icon> 移除
+                </el-button>
+              </div>
+
+              <div class="guest-company-list">
+                <div
+                  v-for="(company, compIdx) in guest.companies"
+                  :key="compIdx"
+                  class="guest-company-item"
+                >
+                  <div class="company-row two-columns">
                     <el-input
-                      v-model="company.position"
-                      placeholder="职务"
-                      class="position-input"
+                      v-model="company.department"
+                      placeholder="公司部门"
+                      class="company-input"
                     />
-                    <el-button
-                      type="danger"
-                      link
-                      class="remove-company-btn"
-                      @click="removeCompany(guestIdx, compIdx)"
-                    >
-                      <el-icon><Delete /></el-icon>
-                    </el-button>
+                    <div class="position-wrapper">
+                      <el-input
+                        v-model="company.position"
+                        placeholder="职务"
+                        class="position-input"
+                      />
+                      <el-button
+                        type="danger"
+                        link
+                        class="remove-company-btn"
+                        @click="removeCompany(guestIdx, compIdx)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                      </el-button>
+                    </div>
                   </div>
                 </div>
+                <el-button
+                  type="primary"
+                  link
+                  class="add-company-btn"
+                  @click="addCompany(guestIdx)"
+                >
+                  <el-icon><Plus /></el-icon> 添加公司/职务
+                </el-button>
               </div>
-              <el-button type="primary" link class="add-company-btn" @click="addCompany(guestIdx)">
-                <el-icon><Plus /></el-icon> 添加公司/职务
-              </el-button>
             </div>
           </div>
         </div>
@@ -266,7 +359,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Delete, DataAnalysis, Plus, Clock } from '@element-plus/icons-vue'
 import ConferenceNavigation from '@/components/ConferenceNavigation.vue'
@@ -337,7 +430,6 @@ const meetings = ref<MeetingItem[]>([
   },
 ])
 
-// 议程数据
 const agendaList = ref<AgendaItem[]>([
   {
     id: 1,
@@ -355,7 +447,7 @@ const agendaList = ref<AgendaItem[]>([
     topic: '开幕致辞',
     speakerDetails: [
       '致辞嘉宾：王远航（海港能源科技有限公司/董事长）',
-      '特定（上海国际航运发展促进协会领导致欢迎辞/处长）',
+      '待定（上海国际航运发展促进协会领导致欢迎辞/处长）',
       '待定（上海组合港管理委员会办公室领导致辞）',
       '待定（中国船东协会会长致辞/会长）',
       '待定（浦东新区商务委（航运办）领导致辞）',
@@ -389,7 +481,25 @@ const agendaList = ref<AgendaItem[]>([
   },
 ])
 
-// 根据议程阶段获取圆点样式
+// 判断是否需要显示议题输入框的阶段
+const stagesWithTopic = ['主题演讲', '圆桌讨论', '专题论坛']
+
+// 计算属性：是否显示议题输入框
+const shouldShowTopicInput = computed(() => {
+  return stagesWithTopic.includes(agendaForm.value.stage)
+})
+
+// 计算属性：嘉宾标签文字
+const guestLabel = computed(() => {
+  const labelMap: Record<string, string> = {
+    开幕致辞: '致辞嘉宾',
+    主题演讲: '演讲嘉宾',
+    专题论坛: '演讲嘉宾',
+    圆桌讨论: '对话嘉宾',
+  }
+  return labelMap[agendaForm.value.stage] || '嘉宾'
+})
+
 const getDotClass = (stage: string) => {
   const map: Record<string, string> = {
     签到入场: 'dot-gray',
@@ -400,7 +510,6 @@ const getDotClass = (stage: string) => {
   return map[stage] || 'dot-gray'
 }
 
-// 根据议程阶段获取标签样式
 const getTagClass = (stage: string) => {
   const map: Record<string, string> = {
     签到入场: 'tag-gray',
@@ -415,17 +524,58 @@ const selectedMeetingId = ref<number>(1)
 const showAgendaView = ref(false)
 const currentMeetingName = ref('')
 
-// 弹窗相关
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增议程')
 const editingAgendaId = ref<number | null>(null)
+
+// 扩展表单数据结构
 const agendaForm = ref({
   startTime: '',
   endTime: '',
   stage: '',
   topic: '',
+  speakers: [] as string[],
+  speakerDetails: [] as string[],
+  host: '',
   guests: [] as Guest[],
 })
+
+// 阶段变更时的处理
+const handleStageChange = (value: string) => {
+  // 清空相关数据
+  if (!stagesWithTopic.includes(value)) {
+    agendaForm.value.topic = ''
+  }
+
+  // 根据阶段重置嘉宾数据结构
+  if (value === '开幕致辞') {
+    if (!agendaForm.value.speakerDetails.length) {
+      agendaForm.value.speakerDetails = ['']
+    }
+    agendaForm.value.speakers = []
+    agendaForm.value.guests = []
+    agendaForm.value.host = ''
+  } else if (value === '主题演讲' || value === '专题论坛') {
+    if (!agendaForm.value.speakers.length) {
+      agendaForm.value.speakers = ['']
+    }
+    agendaForm.value.speakerDetails = []
+    agendaForm.value.guests = []
+    agendaForm.value.host = ''
+  } else if (value === '圆桌讨论') {
+    if (!agendaForm.value.guests.length) {
+      agendaForm.value.guests = [{ name: '', companies: [{ department: '', position: '' }] }]
+    }
+    agendaForm.value.speakers = []
+    agendaForm.value.speakerDetails = []
+  } else {
+    // 其他阶段清空所有嘉宾数据
+    agendaForm.value.speakers = []
+    agendaForm.value.speakerDetails = []
+    agendaForm.value.guests = []
+    agendaForm.value.host = ''
+  }
+}
 
 const handleMeetingChange = (meetingId: number) => {
   selectedMeetingId.value = meetingId
@@ -485,6 +635,9 @@ const handleAddAgenda = () => {
     endTime: '',
     stage: '',
     topic: '',
+    speakers: [],
+    speakerDetails: [],
+    host: '',
     guests: [],
   }
   dialogVisible.value = true
@@ -494,34 +647,31 @@ const handleEditAgenda = (item: AgendaItem) => {
   dialogTitle.value = '编辑议程'
   editingAgendaId.value = item.id
 
-  // 转换旧数据格式到新格式
-  let guests: Guest[] = []
-  if (item.guests && item.guests.length > 0) {
-    guests = item.guests.map((g) => {
-      // 兼容旧格式（没有companies数组的情况）
-      if (Array.isArray(g.companies)) {
-        return g as Guest
-      } else {
-        return {
-          name: (g as any).name,
-          companies: [
-            {
-              department: (g as any).position?.split('/')[0] || '',
-              position: (g as any).position?.split('/')[1] || '',
-            },
-          ],
-        }
-      }
-    })
-  }
-
   agendaForm.value = {
     startTime: item.startTime,
     endTime: item.endTime,
     stage: item.stage,
-    topic: item.topic,
-    guests: guests,
+    topic: item.topic || '',
+    speakers: item.speakers ? [...item.speakers] : [],
+    speakerDetails: item.speakerDetails ? [...item.speakerDetails] : [],
+    host: item.host || '',
+    guests: item.guests ? JSON.parse(JSON.stringify(item.guests)) : [],
   }
+
+  // 确保每个阶段有至少一个输入框
+  if (agendaForm.value.stage === '开幕致辞' && agendaForm.value.speakerDetails.length === 0) {
+    agendaForm.value.speakerDetails = ['']
+  }
+  if (
+    (agendaForm.value.stage === '主题演讲' || agendaForm.value.stage === '专题论坛') &&
+    agendaForm.value.speakers.length === 0
+  ) {
+    agendaForm.value.speakers = ['']
+  }
+  if (agendaForm.value.stage === '圆桌讨论' && agendaForm.value.guests.length === 0) {
+    agendaForm.value.guests = [{ name: '', companies: [{ department: '', position: '' }] }]
+  }
+
   dialogVisible.value = true
 }
 
@@ -541,6 +691,25 @@ const handleDeleteAgenda = (item: AgendaItem) => {
     .catch(() => {})
 }
 
+// 致辞嘉宾相关方法
+const addSpeakerDetail = () => {
+  agendaForm.value.speakerDetails.push('')
+}
+
+const removeSpeakerDetail = (index: number) => {
+  agendaForm.value.speakerDetails.splice(index, 1)
+}
+
+// 演讲嘉宾相关方法
+const addSpeaker = () => {
+  agendaForm.value.speakers.push('')
+}
+
+const removeSpeaker = (index: number) => {
+  agendaForm.value.speakers.splice(index, 1)
+}
+
+// 对话嘉宾相关方法
 const addGuest = () => {
   agendaForm.value.guests.push({ name: '', companies: [{ department: '', position: '' }] })
 }
@@ -561,34 +730,64 @@ const removeCompany = (guestIndex: number, companyIndex: number) => {
 }
 
 const saveAgenda = () => {
-  if (!agendaForm.value.startTime || !agendaForm.value.endTime || !agendaForm.value.topic) {
-    ElMessage.warning('请填写必填项（开始时间、结束时间、议题）')
+  // 验证必填项
+  if (!agendaForm.value.startTime || !agendaForm.value.endTime) {
+    ElMessage.warning('请填写开始时间和结束时间')
     return
+  }
+
+  if (!agendaForm.value.stage) {
+    ElMessage.warning('请选择议程阶段')
+    return
+  }
+
+  // 如果需要显示议题输入框，则验证议题是否填写
+  if (shouldShowTopicInput.value && !agendaForm.value.topic) {
+    ElMessage.warning('请填写议题内容')
+    return
+  }
+
+  // 验证嘉宾数据
+  if (agendaForm.value.stage === '开幕致辞') {
+    const validDetails = agendaForm.value.speakerDetails.filter((d) => d.trim())
+    if (validDetails.length === 0) {
+      ElMessage.warning('请至少填写一位致辞嘉宾')
+      return
+    }
+  } else if (agendaForm.value.stage === '主题演讲' || agendaForm.value.stage === '专题论坛') {
+    const validSpeakers = agendaForm.value.speakers.filter((s) => s.trim())
+    if (validSpeakers.length === 0) {
+      ElMessage.warning('请至少填写一位演讲嘉宾')
+      return
+    }
+  } else if (agendaForm.value.stage === '圆桌讨论') {
+    const validGuests = agendaForm.value.guests.filter((g) => g.name.trim())
+    if (validGuests.length === 0) {
+      ElMessage.warning('请至少填写一位对话嘉宾')
+      return
+    }
+  }
+
+  const newAgendaItem: AgendaItem = {
+    id: editingAgendaId.value || Math.max(...agendaList.value.map((a) => a.id), 0) + 1,
+    startTime: agendaForm.value.startTime,
+    endTime: agendaForm.value.endTime,
+    stage: agendaForm.value.stage,
+    topic: agendaForm.value.topic,
+    speakers: agendaForm.value.speakers.filter((s) => s.trim()),
+    speakerDetails: agendaForm.value.speakerDetails.filter((d) => d.trim()),
+    host: agendaForm.value.host,
+    guests: agendaForm.value.guests.filter((g) => g.name.trim()),
   }
 
   if (editingAgendaId.value) {
     const index = agendaList.value.findIndex((a) => a.id === editingAgendaId.value)
     if (index !== -1) {
-      agendaList.value[index] = {
-        ...agendaList.value[index],
-        startTime: agendaForm.value.startTime,
-        endTime: agendaForm.value.endTime,
-        stage: agendaForm.value.stage,
-        topic: agendaForm.value.topic,
-        guests: agendaForm.value.guests,
-      }
+      agendaList.value[index] = newAgendaItem
       ElMessage.success('编辑成功')
     }
   } else {
-    const newId = Math.max(...agendaList.value.map((a) => a.id), 0) + 1
-    agendaList.value.push({
-      id: newId,
-      startTime: agendaForm.value.startTime,
-      endTime: agendaForm.value.endTime,
-      stage: agendaForm.value.stage,
-      topic: agendaForm.value.topic,
-      guests: agendaForm.value.guests,
-    })
+    agendaList.value.push(newAgendaItem)
     ElMessage.success('新增成功')
   }
   dialogVisible.value = false
@@ -599,17 +798,17 @@ const saveAgenda = () => {
 .agenda-page {
   min-height: 100vh;
   background: #f5f7fa;
-  padding: 16px;
 }
 
 .content-card {
-  background: #ffffff;
+  padding: 10px;
   border-radius: 8px;
   box-shadow: none;
   overflow: hidden;
 }
 
 .table-section {
+  background: #ffffff;
   padding: 20px;
 }
 
@@ -662,17 +861,16 @@ const saveAgenda = () => {
   color: #f53f3f;
 }
 
-/* ========== 议程安排样式 - 时间轴布局 ========== */
+/* ========== 议程安排样式 - 卡片式时间轴 ========== */
 .agenda-section {
-  padding: 0;
+  background: #ffffff;
 }
 
-/* 头部 */
 .agenda-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 10px 24px;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -687,7 +885,6 @@ const saveAgenda = () => {
   gap: 12px;
 }
 
-/* 导出PDF按钮 */
 .btn-export-pdf {
   background: #4ade80;
   border: none;
@@ -704,7 +901,6 @@ const saveAgenda = () => {
   color: #14532d;
 }
 
-/* 新建会议按钮 */
 .btn-new-meeting {
   background: #1e40af;
   border: none;
@@ -722,42 +918,59 @@ const saveAgenda = () => {
   color: #ffffff;
 }
 
-/* 时间轴容器 */
-.timeline-container {
-  padding: 24px;
+/* 垂直时间轴布局 */
+.vertical-timeline-wrapper {
+  padding: 24px 24px 32px 24px;
+  display: flex;
+  justify-content: center;
 }
 
-/* 时间轴单项 */
-.timeline-item {
+.timeline-items {
+  max-width: 1000px;
+  margin: 0;
+}
+
+.timeline-row {
   display: flex;
-  align-items: flex-start;
-  position: relative;
+  margin-bottom: 32px;
+}
+
+.timeline-row:last-child {
   margin-bottom: 0;
 }
 
-/* 左侧时间轴区域 */
+/* 左侧圆点连线区域 */
 .timeline-left {
-  position: relative;
-  width: 24px;
+  width: 40px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  position: relative;
 }
 
-/* 时间轴圆点 */
 .timeline-dot {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  flex-shrink: 0;
+  background: #9ca3af;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 2px #e5e7eb;
+  z-index: 2;
   margin-top: 8px;
+}
+
+.timeline-line {
+  position: absolute;
+  top: 24px;
+  width: 2px;
+  height: calc(100% + 8px);
+  background: #e5e7eb;
   z-index: 1;
 }
 
-/* 圆点颜色 */
 .dot-gray {
-  background: #d1d5db;
+  background: #9ca3af;
 }
 .dot-orange {
   background: #f97316;
@@ -769,61 +982,48 @@ const saveAgenda = () => {
   background: #22c55e;
 }
 
-/* 时间轴连线 */
-.timeline-line {
-  position: absolute;
-  top: 20px;
-  width: 2px;
-  height: calc(100% + 40px);
-  background: #e5e7eb;
-}
-
-/* 时间文本 */
-.timeline-time {
-  width: 100px;
-  flex-shrink: 0;
-  font-size: 14px;
-  color: #6b7280;
-  padding-left: 16px;
-  padding-top: 6px;
-  line-height: 1.4;
-}
-
 /* 议程卡片 */
 .agenda-card {
   flex: 1;
-  margin-left: 24px;
-  margin-bottom: 24px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px 20px;
+  border-radius: 12px;
+  padding: 20px 24px;
   transition: box-shadow 0.2s;
+  position: relative;
+  min-width: 900px;
 }
 
 .agenda-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* 卡片头部 */
+.card-time {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .card-header-left {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
 }
 
-/* 阶段标签 */
 .stage-tag {
   display: inline-block;
-  padding: 2px 10px;
+  padding: 4px 12px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
@@ -846,14 +1046,12 @@ const saveAgenda = () => {
   color: #22c55e;
 }
 
-/* 卡片标题 */
 .card-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #1f2937;
 }
 
-/* 卡片操作按钮 */
 .card-actions {
   display: flex;
   gap: 12px;
@@ -880,15 +1078,14 @@ const saveAgenda = () => {
   color: #dc2626;
 }
 
-/* 卡片内容 */
 .card-content {
   font-size: 14px;
   color: #6b7280;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .content-line {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .content-line:first-child {
@@ -903,23 +1100,12 @@ const saveAgenda = () => {
   color: #4b5563;
 }
 
-/* 空状态 */
 .empty-agenda {
   padding: 60px 0;
   text-align: center;
 }
 
-/* 最后一个卡片底部无边距 */
-.timeline-item:last-child .agenda-card {
-  margin-bottom: 0;
-}
-
-/* 最后一个时间轴连线隐藏 */
-.timeline-item:last-child .timeline-line {
-  display: none;
-}
-
-/* ========== 弹窗样式 - 按图片设计 ========== */
+/* ========== 弹窗样式 ========== */
 .agenda-dialog :deep(.el-dialog) {
   border-radius: 12px;
   background: #f5f7fa;
@@ -955,7 +1141,6 @@ const saveAgenda = () => {
   padding: 20px 24px;
 }
 
-/* 表单项样式 */
 .form-section {
   background: #ffffff;
   border-radius: 12px;
@@ -982,6 +1167,9 @@ const saveAgenda = () => {
 
 .form-item {
   margin-bottom: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .form-item.full-width {
@@ -991,8 +1179,10 @@ const saveAgenda = () => {
 .form-label {
   font-size: 14px;
   font-weight: 500;
+  width: 80px;
   color: #1f2937;
   margin-bottom: 8px;
+  margin-right: 8px;
   display: block;
 }
 
@@ -1003,6 +1193,14 @@ const saveAgenda = () => {
 }
 
 .form-input {
+  width: 100%;
+}
+
+.time-picker {
+  width: 100%;
+}
+
+.time-picker :deep(.el-input__wrapper) {
   width: 100%;
 }
 
@@ -1025,7 +1223,6 @@ const saveAgenda = () => {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
-/* 嘉宾模块样式 */
 .guest-section {
   background: #ffffff;
   border-radius: 12px;
@@ -1057,7 +1254,99 @@ const saveAgenda = () => {
   color: #2563eb;
 }
 
-/* 嘉宾卡片 */
+/* 致辞嘉宾样式 */
+.speaker-details-section {
+  margin-top: 8px;
+}
+
+.speaker-detail-item {
+  margin-bottom: 12px;
+}
+
+.speaker-detail-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.speaker-detail-input {
+  flex: 1;
+}
+
+.speaker-detail-input :deep(.el-input__wrapper) {
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.remove-detail-btn {
+  padding: 0;
+  font-size: 16px;
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.remove-detail-btn:hover {
+  color: #dc2626;
+}
+
+.add-detail-btn {
+  font-size: 13px;
+  color: #3b82f6;
+  padding: 8px 0 0 0;
+  margin-top: 8px;
+}
+
+.add-detail-btn:hover {
+  color: #2563eb;
+}
+
+/* 演讲嘉宾样式 */
+.speaker-section {
+  margin-top: 8px;
+}
+
+.speaker-item {
+  margin-bottom: 12px;
+}
+
+.speaker-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.speaker-input {
+  flex: 1;
+}
+
+.speaker-input :deep(.el-input__wrapper) {
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.remove-speaker-btn {
+  padding: 0;
+  font-size: 16px;
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.remove-speaker-btn:hover {
+  color: #dc2626;
+}
+
+.add-speaker-btn {
+  font-size: 13px;
+  color: #3b82f6;
+  padding: 8px 0 0 0;
+  margin-top: 8px;
+}
+
+.add-speaker-btn:hover {
+  color: #2563eb;
+}
+
+/* 对话嘉宾样式 */
 .guest-card {
   background: #f8fafc;
   border-radius: 10px;
@@ -1160,7 +1449,6 @@ const saveAgenda = () => {
   color: #2563eb;
 }
 
-/* 底部按钮 */
 .dialog-footer {
   display: flex;
   justify-content: center;

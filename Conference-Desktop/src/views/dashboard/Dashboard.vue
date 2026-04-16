@@ -190,13 +190,13 @@
           <div class="header-right">
             <div class="header-actions">
               <!-- 刷新按钮 -->
-              <el-button type="text" @click="handleRefresh" class="icon-button">
+              <el-button link @click="handleRefresh" class="icon-button">
                 <el-icon><RefreshRight /></el-icon>
               </el-button>
 
               <!-- 通知图标 -->
               <el-badge :value="3" class="notification-badge">
-                <el-button type="text" class="icon-button">
+                <el-button link class="icon-button">
                   <el-icon><Bell /></el-icon>
                 </el-button>
               </el-badge>

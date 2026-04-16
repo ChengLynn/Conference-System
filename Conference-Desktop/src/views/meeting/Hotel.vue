@@ -1,2396 +1,2682 @@
 <template>
-  <div class="agenda-container">
-    <!-- 视图切换 tabs -->
-    <div class="view-tabs">
-      <div class="tab-item" :class="{ active: currentView === 'list' }" @click="switchView('list')">
-        酒店事项
+  <!-- 通用导航组件 -->
+  <ConferenceNavigation
+    :currentPage="'议程安排'"
+    :meetings="meetings"
+    @meeting-change="handleMeetingChange"
+  />
+  <div class="agenda-page">
+    <!-- 酒店基础信息配置区 -->
+    <div class="hotel-config-card">
+      <div class="config-header">
+        <div class="hotel-selector">
+          <span class="label">预选酒店：</span>
+          <el-select v-model="selectedHotel" placeholder="选择酒店" class="hotel-select">
+            <el-option label="上海汤臣洲际大酒店" value="1" />
+            <el-option label="上海浦东丽思卡尔顿" value="2" />
+            <el-option label="上海金茂君悦大酒店" value="3" />
+          </el-select>
+          <el-button link class="import-btn" @click="handleImportHotel">
+            <el-icon><Upload /></el-icon> 导入酒店
+          </el-button>
+          <el-button link class="remove-btn" @click="handleRemoveHotel">
+            <el-icon><Delete /></el-icon> 移除
+          </el-button>
+        </div>
+        <div class="hotel-status">
+          <el-tag type="success" effect="plain" size="large">已确认使用</el-tag>
+          <el-button link class="cancel-confirm-btn">取消确认</el-button>
+        </div>
       </div>
-      <div
-        class="tab-item"
-        :class="{ active: currentView === 'detail' }"
-        @click="switchView('detail')"
-      >
-        酒店列表
-      </div>
-    </div>
 
-    <!-- 议程列表视图 -->
-    <div v-if="currentView === 'list'" class="content-card">
-      <!-- 查询区域 -->
-      <div class="search-section">
-        <div class="search-row">
-          <div class="search-item">
-            <label>请输入会议名称</label>
-            <el-input
-              :style="{ width: '250px' }"
-              v-model="searchForm.meetingName"
-              placeholder="请输入会议名称"
-              clearable
-            />
-          </div>
-
-          <div class="search-item">
-            <label>请选择创建日期</label>
+      <div class="config-body">
+        <div class="config-row">
+          <div class="config-item">
+            <span class="label">使用时间段</span>
             <el-date-picker
-              v-model="searchForm.createDate"
-              type="date"
-              placeholder="请选择创建日期"
-              format="YYYY-MM-DD"
-              value-format="YYYY-MM-DD"
+              v-model="usageTimeRange"
+              type="datetimerange"
+              range-separator="至"
+              start-placeholder="开始时间"
+              end-placeholder="结束时间"
+              format="YYYY-MM-DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              class="time-range-picker"
             />
           </div>
-        </div>
-      </div>
-
-      <!-- 会议列表表格 -->
-      <div class="table-section">
-        <el-table :data="meetingList" style="width: 100%" border>
-          <el-table-column prop="name" label="会议名称" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="hotelName" label="酒店名称" width="200" />
-          <el-table-column prop="userDate" label="使用时间" width="200" />
-          <el-table-column label="事项对接" width="200">
-            <template #default="{ row }">
-              <div class="editors-container">
-                <el-button link type="primary" size="medium" @click="handleEdit(row)">
-                  <div class="editors-list">
-                    <span v-for="editor in row.editors" :key="editor" class="editor-item">
-                      {{ editor }}
-                    </span>
-                  </div>
-                </el-button>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="220" fixed="right">
-            <template #default="{ row }">
-              <el-tooltip content="编辑" placement="top">
-                <el-button link type="primary" circle size="small" @click="handleEdit(row)">
-                  <el-icon><Edit /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="删除" placement="top">
-                <el-button link type="danger" circle size="small" @click="handleDelete(row)">
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="查看" placement="top">
-                <el-button link type="primary" circle size="small" @click="handleView(row)">
-                  <el-icon><View /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="打印" placement="top">
-                <el-button link type="primary" circle size="small" @click="handlePrint(row)">
-                  <el-icon><Printer /></el-icon>
-                </el-button>
-              </el-tooltip>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <!-- 底部操作栏：添加表单按钮 + 分页 -->
-        <div class="table-footer">
-          <div class="add-form-button">
-            <el-button type="primary" size="small" @click="handleAdd">添加表单</el-button>
-          </div>
-          <div class="pagination-wrapper">
-            <div class="pagination-info">共 {{ total }} 条 每页 {{ pageSize }} 条</div>
-            <el-pagination
-              v-model:current-page="currentPage"
-              v-model:page-size="pageSize"
-              :page-sizes="[10, 20, 30, 50]"
-              layout="prev, pager, next, jumper"
-              :total="total"
-              @size-change="handleSizeChange"
-              @current-change="handleCurrentChange"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 酒店详情视图 - 汤臣洲际大酒店 -->
-    <div v-if="currentView === 'detail'" class="content-card">
-      <!-- 酒店详情头部 -->
-      <div class="detail-header">
-        <div class="header-title-row">
-          <h1>汤臣洲际大酒店</h1>
-          <div class="header-actions">
-            <el-tooltip content="编辑酒店" placement="top">
-              <el-button type="primary" circle size="small" @click="handleEditHotel">
-                <el-icon><Edit /></el-icon>
-              </el-button>
-            </el-tooltip>
-            <el-tooltip content="删除酒店" placement="top">
-              <el-button type="danger" circle size="small" @click="handleDeleteHotel">
-                <el-icon><Delete /></el-icon>
-              </el-button>
-            </el-tooltip>
-          </div>
-        </div>
-      </div>
-
-      <!-- 酒店事项分类标签 -->
-      <div class="hotel-tabs">
-        <div
-          class="hotel-tab-item"
-          :class="{ active: activeHotelTab === 'project' }"
-          @click="activeHotelTab = 'project'"
-        >
-          项目清单
-        </div>
-        <div
-          class="hotel-tab-item"
-          :class="{ active: activeHotelTab === 'menu' }"
-          @click="activeHotelTab = 'menu'"
-        >
-          餐饮菜单
-        </div>
-        <div
-          class="hotel-tab-item"
-          :class="{ active: activeHotelTab === 'comprehensive' }"
-          @click="activeHotelTab = 'comprehensive'"
-        >
-          综合事项
-        </div>
-        <div
-          class="hotel-tab-item"
-          :class="{ active: activeHotelTab === 'guests' }"
-          @click="activeHotelTab = 'guests'"
-        >
-          入住嘉宾
-        </div>
-        <div
-          class="hotel-tab-item"
-          :class="{ active: activeHotelTab === 'transport' }"
-          @click="activeHotelTab = 'transport'"
-        >
-          嘉宾接送
-        </div>
-      </div>
-
-      <!-- 项目清单表格 -->
-      <div v-if="activeHotelTab === 'project'" class="hotel-items-table">
-        <el-table :data="hotelItems" style="width: 100%" border>
-          <el-table-column prop="projectName" label="项目名称" min-width="150" />
-          <el-table-column prop="spec" label="规模/数量/尺寸" min-width="150" />
-          <el-table-column prop="remarks" label="备注" min-width="200" />
-          <el-table-column prop="standardPrice" label="标准价格" width="120" />
-          <el-table-column prop="preferentialPrice" label="优惠价格" width="120" />
-          <el-table-column prop="contact" label="事项对接" width="120" />
-          <el-table-column label="操作" width="220" fixed="right">
-            <template #default="{ row }">
-              <el-tooltip content="编辑" placement="top">
-                <el-button link type="primary" circle size="small" @click="handleEditItem(row)">
-                  <el-icon><Edit /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="查看">
-                <el-button link type="primary" circle size="small" @click="handleViewItem(row)">
-                  <el-icon><View /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="删除" placement="top">
-                <el-button link type="danger" circle size="small" @click="handleDeleteItem(row)">
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </el-tooltip>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-
-      <!-- 餐饮菜单页面 - 包含茶歇菜单和晚宴菜单 -->
-      <!-- 餐饮菜单页面 - 包含茶歇菜单和晚宴菜单 -->
-      <div v-if="activeHotelTab === 'menu'" class="menu-container">
-        <!-- 茶歇菜单 -->
-        <div class="menu-section">
-          <div class="menu-header">
-            <h2>茶歇菜单</h2>
-            <div class="menu-actions">
-              <el-tooltip content="编辑" placement="top">
-                <el-button type="primary" circle size="small" @click="handleEditMenu('tea')">
-                  <el-icon><Edit /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <!-- 已确认/待确认状态切换按钮 -->
-              <el-tooltip
-                :content="teaMenu.status === 'confirmed' ? '已确认' : '待确认'"
-                placement="top"
+          <div class="config-item">
+            <span class="label">对接负责人</span>
+            <div class="contact-list">
+              <el-tag
+                v-for="(contact, idx) in contacts"
+                :key="idx"
+                closable
+                @close="removeContact(idx)"
+                class="contact-tag"
               >
-                <el-button
-                  :type="teaMenu.status === 'confirmed' ? 'success' : 'warning'"
-                  circle
-                  size="small"
-                  @click="toggleMenuStatus('tea')"
-                >
-                  <el-icon v-if="teaMenu.status === 'confirmed'"><Select /></el-icon>
-                  <el-icon v-else><Clock /></el-icon>
-                </el-button>
-              </el-tooltip>
-            </div>
-          </div>
-          <div class="menu-content">
-            <!-- 顶部：菜单项列表 -->
-            <div class="menu-items">
-              <div class="menu-item" v-for="(item, index) in teaMenu.items" :key="index">
-                {{ index + 1 }}.{{ item }}
-              </div>
-            </div>
-
-            <!-- 底部：价格信息、对接人信息 -->
-            <div class="menu-bottom">
-              <div class="menu-footer">
-                <div class="price-info">
-                  <span class="label">单价</span>
-                  <span class="value">{{ teaMenu.price }}</span>
-                </div>
-                <div class="price-info">
-                  <span class="label">数量</span>
-                  <span class="value">{{ teaMenu.quantity }}份</span>
-                </div>
-                <div class="price-info">
-                  <span class="label">总计</span>
-                  <span class="value total">￥{{ teaMenu.total }}</span>
-                </div>
-              </div>
-
-              <div class="menu-contact">
-                <span class="label">对接人：</span>
-                <span class="value">{{ teaMenu.contact }}</span>
-                <span class="label" style="margin-left: 20px">审核人：</span>
-                <span class="value">{{ teaMenu.auditor }}</span>
-                <!-- 状态标签 -->
-                <span
-                  class="status-tag"
-                  :class="teaMenu.status === 'confirmed' ? 'status-confirmed' : 'status-pending'"
-                >
-                  {{ teaMenu.status === 'confirmed' ? '已确认' : '待确认' }}
-                </span>
-              </div>
+                {{ contact }}
+              </el-tag>
+              <el-button link class="add-contact-btn" @click="addContact">
+                <el-icon><Plus /></el-icon> 添加
+              </el-button>
+              <el-button link class="export-list-btn" @click="handleExportList">
+                <el-icon><Download /></el-icon> 导出总清单
+              </el-button>
             </div>
           </div>
         </div>
 
-        <!-- 晚宴菜单 -->
-        <div class="menu-section">
-          <div class="menu-header">
-            <h2>晚宴菜单</h2>
-            <div class="menu-actions">
-              <el-tooltip content="编辑" placement="top">
-                <el-button type="primary" circle size="small" @click="handleEditMenu('dinner')">
-                  <el-icon><Edit /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <!-- 已确认/待确认状态切换按钮 -->
-              <el-tooltip
-                :content="dinnerMenu.status === 'confirmed' ? '已确认' : '待确认'"
-                placement="top"
-              >
-                <el-button
-                  :type="dinnerMenu.status === 'confirmed' ? 'success' : 'warning'"
-                  circle
-                  size="small"
-                  @click="toggleMenuStatus('dinner')"
-                >
-                  <el-icon v-if="dinnerMenu.status === 'confirmed'"><Select /></el-icon>
-                  <el-icon v-else><Clock /></el-icon>
-                </el-button>
-              </el-tooltip>
-            </div>
+        <div class="hotel-detail-row">
+          <div class="hotel-address">
+            <el-icon><Location /></el-icon>
+            <span>{{ hotelDetail.address }}</span>
           </div>
-          <div class="menu-content">
-            <!-- 顶部：菜单项列表 -->
-            <div class="menu-items">
-              <div class="menu-item" v-for="(item, index) in dinnerMenu.items" :key="index">
-                {{ index + 1 }}.{{ item }}
-              </div>
-            </div>
-
-            <!-- 底部：价格信息、对接人信息 -->
-            <div class="menu-bottom">
-              <div class="menu-footer">
-                <div class="price-info">
-                  <span class="label">单价</span>
-                  <span class="value">{{ dinnerMenu.price }}</span>
-                </div>
-                <div class="price-info">
-                  <span class="label">数量</span>
-                  <span class="value">{{ dinnerMenu.quantity }}份</span>
-                </div>
-                <div class="price-info">
-                  <span class="label">总计</span>
-                  <span class="value total">￥{{ dinnerMenu.total }}</span>
-                </div>
-              </div>
-
-              <div class="menu-contact">
-                <span class="label">对接人：</span>
-                <span class="value">{{ dinnerMenu.contact }}</span>
-                <span class="label" style="margin-left: 20px">审核人：</span>
-                <span class="value">{{ dinnerMenu.auditor }}</span>
-                <!-- 状态标签 -->
-                <span
-                  class="status-tag"
-                  :class="dinnerMenu.status === 'confirmed' ? 'status-confirmed' : 'status-pending'"
-                >
-                  {{ dinnerMenu.status === 'confirmed' ? '已确认' : '待确认' }}
-                </span>
-              </div>
-            </div>
+          <div class="hotel-contact">
+            <el-icon><Phone /></el-icon>
+            <span>{{ hotelDetail.contact }}</span>
           </div>
-        </div>
-      </div>
-
-      <!-- 综合事项 -->
-      <!-- 综合事项 -->
-      <div v-if="activeHotelTab === 'comprehensive'" class="comprehensive-container">
-        <!-- 会议现场信息 -->
-        <div class="conference-venue">
-          <div>
-            <div class="section-header">
-              <h3>会议现场--紫玉厅A厅</h3>
-              <div class="section-actions">
-                <!-- <el-tooltip content="编辑" placement="top">
-                  <el-button
-                    type="primary"
-                    circle
-                    size="small"
-                    @click="handleEditComprehensive('venue')"
-                  >
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                </el-tooltip> -->
-                <div class="info-row">
-                  <span>对接人：</span>
-                  <span class="info-value">Iris</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="info-grid">
-              <div class="info-row">
-                <span class="info-label">人员规模：</span>
-                <span class="info-value">200人</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">大厅面积：</span>
-                <span class="info-value">300平方米</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">LED屏幕：</span>
-                <span class="info-value">5.44M宽*2.88M高</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">舞台高度：</span>
-                <span class="info-value">40cm</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">音响设备：</span>
-                <span class="info-value">酒店提供</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">前排沙发：</span>
-                <span class="info-value">暂不提供</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">话筒：</span>
-                <span class="info-value">2支移动话筒+1个鹅颈话筒</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">讲台：</span>
-                <span class="info-value">61cm*65cm*61cm侧宽-120cm高</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">翻页笔：</span>
-                <span class="info-value">2支</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 指示牌显示屏图片尺寸 -->
-          <div class="section-img">
-            <h4 style="margin-top: 10px">指示牌显示屏图片尺寸</h4>
-            <div class="section-actions"></div>
-          </div>
-
-          <div class="info-list">
-            <div class="info-item">四楼电梯口-1920*1080（横）</div>
-            <div class="info-item">一楼酒店大堂-1080*1920（竖）</div>
-          </div>
-        </div>
-
-        <div class="comprehensive-section">
-          <!-- 酒店联系信息 -->
-          <div>
-            <div class="section-header">
-              <h3>酒店联系</h3>
-            </div>
-
-            <div class="contact-info">
-              <!-- 小海狮头像和酒店名称 -->
-              <div class="contact-person">
-                <div class="person-avatar">
-                  <img src="https://via.placeholder.com/40x40/409eff/ffffff?text=海" alt="小海狮" />
-                </div>
-                <div class="person-details">
-                  <span class="person-name">小海狮</span>
-                  <span class="person-hotel">汤臣洲际大酒店大堂</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 联系信息 -->
-            <div>
-              <div class="section-contant">
-                <h3>联系信息</h3>
-                <el-button
-                  link
-                  type="primary"
-                  size="small"
-                  @click="handleEditComprehensive('contactEdit')"
-                  >编辑</el-button
-                >
-              </div>
-              <div class="contact-row">
-                <el-icon class="contact-icon"><Message /></el-icon>
-                <span class="contact-email">jinjinshejisucai@mail.com</span>
-              </div>
-              <div class="contact-row">
-                <el-icon class="contact-icon"><Phone /></el-icon>
-
-                <span class="contact-phone">15800000000</span>
-              </div>
-            </div>
-            <!-- 收货地址 -->
-            <div>
-              <div class="section-contant">
-                <h3>收货地址</h3>
-                <div class="section-actions">
-                  <el-button
-                    link
-                    type="primary"
-                    size="small"
-                    @click="handleEditComprehensive('contactEdit')"
-                    >编辑</el-button
-                  >
-                </div>
-              </div>
-
-              <div class="address-info">
-                <div class="address-text">北京市，北京市朝阳区翰林达到裕达大厦3层302</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 账单地址 -->
-          <div>
-            <div class="section-contant">
-              <h3>账单地址</h3>
-              <div class="section-actions">
-                <el-button
-                  link
-                  type="primary"
-                  size="small"
-                  @click="handleEditComprehensive('contactEdit')"
-                  >编辑</el-button
-                >
-              </div>
-            </div>
-
-            <div class="address-info">
-              <div class="address-text">与收货地址相同</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 入住嘉宾 -->
-      <div v-if="activeHotelTab === 'guests'" class="guests-container">
-        <!-- 嘉宾信息标题 -->
-        <div class="guests-header">
-          <h2>嘉宾信息</h2>
-        </div>
-
-        <!-- 嘉宾卡片列表 -->
-        <div class="guests-grid">
-          <!-- 嘉宾卡片 1 - 演讲嘉宾 -->
-          <div class="guest-card">
-            <div class="card-header">
-              <div class="guest-type">
-                <span class="type-tag">演讲嘉宾</span>
-              </div>
-              <div class="card-actions">
-                <el-tooltip content="编辑" placement="top">
-                  <el-button type="primary" circle size="small" @click="handleEditGuest(1)">
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                </el-tooltip>
-              </div>
-            </div>
-
-            <div class="guest-info">
-              <div class="guest-avatar">
-                <img src="https://via.placeholder.com/60x60/409eff/ffffff?text=海" alt="小海狮" />
-              </div>
-              <div class="guest-details">
-                <div class="guest-name">小海狮</div>
-                <div class="guest-room">
-                  <span class="room-tag">标准客房--8801</span>
-                  <span class="status-badge status-checked">已入住</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="guest-basic-info">
-              <div class="basic-header">
-                <span class="basic-title">基本信息</span>
-                <el-button link type="primary" size="small" @click="handleEditGuest(1)"
-                  >编辑</el-button
-                >
-              </div>
-
-              <div class="info-item">
-                <span class="info-label">公司：</span>
-                <span class="info-value">上海莫瑞思柯信息技术有限公司</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">职务：</span>
-                <span class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">晚宴：</span>
-                <span class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">电话：</span>
-                <span class="info-value">15800000000</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">邮箱：</span>
-                <span class="info-value">marinecircle@mail.com</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">备注：</span>
-                <span class="info-value"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 嘉宾卡片 2 - 重要嘉宾 -->
-          <div class="guest-card">
-            <div class="card-header">
-              <div class="guest-type">
-                <span class="type-tag type-important">重要嘉宾</span>
-              </div>
-              <div class="card-actions">
-                <el-tooltip content="编辑" placement="top">
-                  <el-button type="primary" circle size="small" @click="handleEditGuest(2)">
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                </el-tooltip>
-              </div>
-            </div>
-
-            <div class="guest-info">
-              <div class="guest-avatar">
-                <img src="https://via.placeholder.com/60x60/409eff/ffffff?text=海" alt="小海狮" />
-              </div>
-              <div class="guest-details">
-                <div class="guest-name">小海狮</div>
-                <div class="guest-room">
-                  <span class="room-tag">标准客房--8801</span>
-                  <span class="status-badge status-checked">已入住</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="guest-basic-info">
-              <div class="basic-header">
-                <span class="basic-title">基本信息</span>
-                <el-button link type="primary" size="small" @click="handleEditGuest(2)"
-                  >编辑</el-button
-                >
-              </div>
-
-              <div class="info-item">
-                <span class="info-label">公司：</span>
-                <span class="info-value">上海莫瑞思柯信息技术有限公司</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">职务：</span>
-                <span class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">晚宴：</span>
-                <span class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">电话：</span>
-                <span class="info-value">15800000000</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">邮箱：</span>
-                <span class="info-value">marinecircle@mail.com</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">备注：</span>
-                <span class="info-value"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 嘉宾卡片 3 - 演讲嘉宾 -->
-          <div class="guest-card">
-            <div class="card-header">
-              <div class="guest-type">
-                <span class="type-tag">演讲嘉宾</span>
-              </div>
-              <div class="card-actions">
-                <el-tooltip content="编辑" placement="top">
-                  <el-button type="primary" circle size="small" @click="handleEditGuest(3)">
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                </el-tooltip>
-              </div>
-            </div>
-
-            <div class="guest-info">
-              <div class="guest-avatar">
-                <img src="https://via.placeholder.com/60x60/409eff/ffffff?text=海" alt="小海狮" />
-              </div>
-              <div class="guest-details">
-                <div class="guest-name">小海狮</div>
-                <div class="guest-room">
-                  <span class="room-tag">标准客房--8801</span>
-                  <span class="status-badge status-checked">已入住</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="guest-basic-info">
-              <div class="basic-header">
-                <span class="basic-title">基本信息</span>
-                <el-button link type="primary" size="small" @click="handleEditGuest(3)"
-                  >编辑</el-button
-                >
-              </div>
-
-              <div class="info-item">
-                <span class="info-label">公司：</span>
-                <span class="info-value">上海莫瑞思树信息技术有限公司</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">职务：</span>
-                <span class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">晚宴：</span>
-                <span class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">电话：</span>
-                <span class="info-value">15800000000</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">邮箱：</span>
-                <span class="info-value">marinecircle@mail.com</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">备注：</span>
-                <span class="info-value"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 嘉宾接送 -->
-      <div v-if="activeHotelTab === 'transport'" class="transport-container">
-        <!-- 左侧：嘉宾信息列表 -->
-        <div class="transport-left">
-          <div class="transport-header">
-            <h3>嘉宾信息</h3>
-          </div>
-
-          <!-- 嘉宾列表 - 三个嘉宾卡片 -->
-          <div class="guest-list">
-            <!-- 嘉宾卡片 1 - 小海狮 演讲嘉宾 已抵达 -->
-            <div class="guest-card">
-              <div class="guest-card-header">
-                <div class="guest-title">
-                  <span class="guest-name">小海狮</span>
-                  <span class="guest-tag speaker-tag">演讲嘉宾</span>
-                </div>
-                <div class="guest-status status-arrived">已抵达</div>
-              </div>
-              <div class="guest-contact">对接人员：Evan</div>
-            </div>
-          </div>
-
-          <!-- 底部行程安排标题 -->
-          <div class="transport-subheader">
-            <h3>行程安排</h3>
-            <el-button link type="primary" size="small" @click="handleEditTransport('schedule')"
-              >编辑</el-button
+          <div class="hotel-rooms">
+            <span>房间数：{{ hotelDetail.rooms }}</span>
+            <span class="price-info">参考价：￥{{ hotelDetail.referencePrice }}/间</span>
+            <span class="price-info contract-price"
+              >协议价：￥{{ hotelDetail.contractPrice }}/间</span
             >
           </div>
-
-          <!-- 行程安排信息 -->
-          <div class="schedule-info">
-            <div class="info-item">
-              <span class="info-label">对接人员：</span>
-              <span class="info-value">Evan</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">送达地点：</span>
-              <span class="info-value">上海虹桥机场</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">送达时间：</span>
-              <span class="info-value">2026-01-01 16:30-17:30</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">送达时间：</span>
-              <span class="info-value">2026-01-01 17:00-17:30</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">接送方式：</span>
-              <span class="info-value">酒店商务车</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">接送司机：</span>
-              <span class="info-value">陈先生</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">司机电话：</span>
-              <span class="info-value">15800000000</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">备注：</span>
-              <span class="info-value"></span>
-            </div>
-          </div>
-          <!-- 基本信息 -->
-          <div class="basic-info-section">
-            <div class="basic-header">
-              <h4>基本信息</h4>
-            </div>
-            <div class="basic-content">
-              <div class="basic-row">
-                <span class="basic-label">公司：</span>
-                <span class="basic-value">上海莫瑞思柯信息技术有限公司</span>
-              </div>
-              <div class="basic-row">
-                <span class="basic-label">职务：</span>
-                <span class="basic-value"></span>
-              </div>
-              <div class="basic-row">
-                <span class="basic-label">晚宴：</span>
-                <span class="basic-value"></span>
-              </div>
-              <div class="basic-row">
-                <span class="basic-label">电话：</span>
-                <span class="basic-value">15800000000</span>
-              </div>
-              <div class="basic-row">
-                <span class="basic-label">邮箱：</span>
-                <span class="basic-value">marinecircle@mail.com</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 右侧：嘉宾详细信息 -->
-        <div class="transport-right">
-          <div class="transport-header">
-            <h3>嘉宾信息</h3>
-          </div>
-
-          <!-- 右侧嘉宾列表 - 四个嘉宾卡片（两行两列） -->
-          <div class="right-guest-grid">
-            <!-- 第一行第一个 - 小海狮 重要嘉宾 -->
-            <div class="right-guest-card">
-              <div class="right-guest-header">
-                <span class="guest-name">小海狮</span>
-                <span class="guest-tag important-tag">重要嘉宾</span>
-              </div>
-              <div class="guest-contact">对接人员：Evan</div>
-              <div class="guest-status status-not-arrived">未抵达</div>
-            </div>
-
-            <!-- 第一行第二个 - 小海狮 重要嘉宾 -->
-            <div class="right-guest-card">
-              <div class="right-guest-header">
-                <span class="guest-name">小海狮</span>
-                <span class="guest-tag important-tag">重要嘉宾</span>
-              </div>
-              <div class="guest-contact">对接人员：Evan</div>
-              <div class="guest-status status-not-arrived">未抵达</div>
-            </div>
-
-            <!-- 第二行第一个 - 小海狮 重要嘉宾 -->
-            <div class="right-guest-card">
-              <div class="right-guest-header">
-                <span class="guest-name">小海狮</span>
-                <span class="guest-tag important-tag">重要嘉宾</span>
-              </div>
-              <div class="guest-contact">对接人员：Evan</div>
-              <div class="guest-status status-not-arrived">未抵达</div>
-            </div>
-
-            <!-- 第二行第二个 - 小海狮 重要嘉宾 -->
-            <div class="right-guest-card">
-              <div class="right-guest-header">
-                <span class="guest-name">小海狮</span>
-                <span class="guest-tag important-tag">重要嘉宾</span>
-              </div>
-              <div class="guest-contact">对接人员：Evan</div>
-              <div class="guest-status status-not-arrived">未抵达</div>
-            </div>
+          <div class="total-cost">
+            <span class="label">费用总计：</span>
+            <span class="cost-value">￥{{ formatNumber(totalAmount + hotelTotalCost) }}</span>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- 功能标签栏 -->
+    <div class="tabs-nav">
+      <el-tabs v-model="activeTab" class="custom-tabs" @tab-change="handleTabChange">
+        <el-tab-pane label="报价清单" name="quote" />
+        <el-tab-pane label="会议厅信息" name="hall" />
+        <el-tab-pane label="菜单信息" name="menu" />
+        <el-tab-pane label="服务方-设计" name="design" />
+        <el-tab-pane label="服务方-搭建" name="build" />
+        <el-tab-pane label="服务方-摄影" name="photo" />
+        <el-tab-pane label="嘉宾入住" name="guestStay" />
+        <el-tab-pane label="接送安排" name="transport" />
+      </el-tabs>
+    </div>
+
+    <!-- 动态内容区 -->
+    <div class="tabs-content">
+      <!-- 报价清单内容 -->
+      <div v-if="activeTab === 'quote'">
+        <div class="cost-overview">
+          <div class="action-buttons">
+            <div>
+              <h2>酒店事项报价清单</h2>
+            </div>
+            <div>
+              <el-button class="btn-import-excel" @click="handleImportExcel">
+                <el-icon><Upload /></el-icon> 导入Excel
+              </el-button>
+              <el-button type="primary" class="btn-add-item" @click="handleAddItem">
+                <el-icon><Plus /></el-icon> 添加项目
+              </el-button>
+              <el-button class="btn-delete-import" @click="handleDeleteImport">
+                <el-icon><Delete /></el-icon> 删除导入
+              </el-button>
+            </div>
+          </div>
+          <div class="cost-cards">
+            <div class="cost-card" v-for="item in costCategories" :key="item.name">
+              <div class="card-info">
+                <div class="card-name">{{ item.name }}</div>
+                <div class="card-amount">￥{{ formatNumber(item.amount) }}</div>
+              </div>
+            </div>
+            <div class="cost-card total-card">
+              <div class="card-info">
+                <div class="card-name">总价</div>
+                <div class="card-amount total-amount">￥{{ formatNumber(totalAmount) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="quote-table-wrapper">
+          <el-table :data="quoteList" stripe border class="quote-table">
+            <el-table-column type="index" label="#" width="60" align="center" />
+            <el-table-column prop="category" label="类别" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getCategoryTagType(row.category)" size="small">{{
+                  row.category
+                }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="project" label="项目" min-width="150" />
+            <el-table-column prop="spec" label="规格/说明" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="unit" label="单位" width="80" align="center" />
+            <el-table-column prop="price" label="单价(元)" width="110" align="right">
+              <template #default="{ row }">￥{{ formatNumber(row.price) }}</template>
+            </el-table-column>
+            <el-table-column prop="quantity" label="数量" width="80" align="center" />
+            <el-table-column prop="total" label="合计(元)" width="120" align="right">
+              <template #default="{ row }">￥{{ formatNumber(row.total) }}</template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
+            <el-table-column label="操作" min-width="120" align="center" fixed="right">
+              <template #default="{ row }">
+                <el-button link class="btn-edit-table" @click="handleEditItem(row)">
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-button>
+                <el-button link class="btn-delete-table" @click="handleDeleteItem(row)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- 会议厅信息内容 - 左右并排显示 -->
+      <div v-if="activeTab === 'hall'" class="hall-info-content">
+        <!-- 循环展示会议厅卡片 -->
+        <div v-for="hall in hallList" :key="hall.id" class="hall-card-detail">
+          <div class="hall-card-header">
+            <div class="hall-title">
+              <h3 class="hall-name">{{ hall.name }}</h3>
+              <span class="hall-floor">{{ hall.floor }}</span>
+            </div>
+            <div class="hall-actions">
+              <el-button link class="hall-edit-btn" @click="handleEditHall(hall)">
+                <el-icon><Edit /></el-icon> 编辑
+              </el-button>
+              <el-button link class="hall-delete-btn" @click="handleDeleteHall(hall)">
+                <el-icon><Delete /></el-icon> 删除
+              </el-button>
+            </div>
+          </div>
+          <div class="hall-detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">面积</span>
+              <span class="detail-value">{{ hall.area }}m²</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">容纳</span>
+              <span class="detail-value">{{ hall.capacity }}人</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">布局</span>
+              <span class="detail-value">{{ hall.layout }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">楼层</span>
+              <span class="detail-value">{{ hall.floor }}</span>
+            </div>
+            <div class="detail-item detail-item-full">
+              <span class="detail-label">设备</span>
+              <span class="detail-value">{{
+                hall.devices?.join(' ') || hall.facilities?.join(' ') || '-'
+              }}</span>
+            </div>
+            <div class="detail-item detail-item-full">
+              <span class="detail-label">备注</span>
+              <span class="detail-value">{{ hall.remark }}</span>
+            </div>
+          </div>
+
+          <!-- 多张图片画廊展示区 -->
+          <div class="hall-gallery">
+            <div class="gallery-header">
+              <span class="gallery-title">宴会厅照片</span>
+              <el-button link class="add-photo-btn" @click="handleOpenImageManager(hall)">
+                <el-icon><Plus /></el-icon> 管理照片
+              </el-button>
+            </div>
+            <div class="gallery-images" v-if="hall.images && hall.images.length > 0">
+              <div
+                v-for="(img, imgIdx) in hall.images"
+                :key="imgIdx"
+                class="gallery-item"
+                @click="handlePreviewImage(hall, imgIdx)"
+              >
+                <img :src="img.url" :alt="img.name || '宴会厅照片'" />
+                <div class="image-overlay">
+                  <el-icon><ZoomIn /></el-icon>
+                </div>
+              </div>
+              <div class="gallery-add-more" @click="handleOpenImageManager(hall)">
+                <el-icon><Plus /></el-icon>
+                <span>添加更多</span>
+              </div>
+            </div>
+            <div v-else class="gallery-empty" @click="handleOpenImageManager(hall)">
+              <el-icon><Camera /></el-icon>
+              <span>点击上传宴会厅照片</span>
+            </div>
+          </div>
+
+          <!-- 费用信息行 -->
+          <div class="hall-price-row">
+            <div class="price-item">
+              <span class="price-label">半天场租</span>
+              <span class="price-value">￥{{ formatNumber(hall.halfDayPrice) }}</span>
+            </div>
+            <div class="price-item">
+              <span class="price-label">全天场租</span>
+              <span class="price-value">￥{{ formatNumber(hall.fullDayPrice) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 菜单信息内容 - 卡片样式表格 -->
+      <div v-if="activeTab === 'menu'" class="menu-info-content">
+        <!-- 茶歇菜单卡片 -->
+        <div class="menu-card">
+          <div class="menu-card-header">
+            <div class="menu-card-title">
+              <span class="title-icon">🍵</span>
+              <h3>茶歇菜单</h3>
+              <span class="menu-count">({{ teaBreakMenu.length }}项)</span>
+            </div>
+            <el-button type="primary" size="small" @click="openAddTeaBreakDialog">
+              <el-icon><Plus /></el-icon> 添加茶歇项
+            </el-button>
+          </div>
+          <div class="menu-card-body">
+            <el-table :data="teaBreakMenu" stripe class="menu-table" style="width: 100%">
+              <el-table-column type="index" label="#" width="55" align="center" />
+              <el-table-column prop="name" label="名称" min-width="120" />
+              <el-table-column prop="category" label="分类" width="90" />
+              <el-table-column prop="quantity" label="数量/份量" width="110" />
+              <el-table-column prop="price" label="单价(元)" width="100" align="right">
+                <template #default="{ row }">￥{{ formatNumber(row.price) }}</template>
+              </el-table-column>
+              <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
+              <el-table-column label="操作" width="100" align="center" fixed="right">
+                <template #default="{ row, $index }">
+                  <el-button link class="edit-btn" @click="openEditTeaBreakDialog(row, $index)">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button link class="delete-btn" @click="teaBreakMenu.splice($index, 1)">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+
+        <!-- 晚宴菜单卡片 -->
+        <div class="menu-card">
+          <div class="menu-card-header">
+            <div class="menu-card-title">
+              <span class="title-icon">🍽️</span>
+              <h3>晚宴菜单</h3>
+              <span class="menu-count">({{ dinnerMenu.length }}项)</span>
+            </div>
+            <el-button type="primary" size="small" @click="openAddDinnerDialog">
+              <el-icon><Plus /></el-icon> 添加晚宴项
+            </el-button>
+          </div>
+          <div class="menu-card-body">
+            <el-table :data="dinnerMenu" stripe class="menu-table" style="width: 100%">
+              <el-table-column type="index" label="#" width="55" align="center" />
+              <el-table-column prop="name" label="名称" min-width="140" />
+              <el-table-column prop="category" label="分类" width="90" />
+              <el-table-column prop="quantity" label="数量/份量" width="110" />
+              <el-table-column prop="price" label="单价(元)" width="100" align="right">
+                <template #default="{ row }">￥{{ formatNumber(row.price) }}</template>
+              </el-table-column>
+              <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
+              <el-table-column label="操作" width="100" align="center" fixed="right">
+                <template #default="{ row, $index }">
+                  <el-button link class="edit-btn" @click="openEditDinnerDialog(row, $index)">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button link class="delete-btn" @click="dinnerMenu.splice($index, 1)">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 服务方-设计内容 - 根据图片重新设计 -->
+      <div v-if="activeTab === 'design'" class="design-content">
+        <div class="design-header">
+          <div class="header-left">
+            <h3>设计事项</h3>
+            <div class="total-cost-badge">
+              费用合计：<span class="total-amount">￥{{ formatNumber(designTotalCost) }}</span>
+            </div>
+          </div>
+          <div class="header-right">
+            <el-button class="import-excel-btn" @click="handleImportDesignExcel">
+              <el-icon><Upload /></el-icon> 导入Excel
+            </el-button>
+            <el-button type="primary" @click="openAddDesignDialog">
+              <el-icon><Plus /></el-icon> 添加事项
+            </el-button>
+            <el-button class="delete-import-btn" @click="handleDeleteDesignImport">
+              <el-icon><Delete /></el-icon> 删除导入
+            </el-button>
+          </div>
+        </div>
+
+        <div class="design-table-wrapper">
+          <el-table :data="designList" stripe border class="design-table" style="width: 100%">
+            <el-table-column type="index" label="#" width="55" align="center" />
+            <el-table-column prop="itemName" label="事项名称" min-width="150" />
+            <el-table-column
+              prop="description"
+              label="事项描述"
+              min-width="200"
+              show-overflow-tooltip
+            />
+            <el-table-column prop="quantity" label="数量" width="80" align="center" />
+            <el-table-column label="设计方" min-width="180">
+              <template #default="{ row }">
+                <div class="contact-info">
+                  <div>{{ row.designer.name }}</div>
+                  <div class="contact-phone">{{ row.designer.phone }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="搭建方" width="180">
+              <template #default="{ row }">
+                <div class="contact-info">
+                  <div>{{ row.builder.name }}</div>
+                  <div class="contact-phone">{{ row.builder.phone }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getDesignStatusType(row.status)" size="small">{{
+                  row.status
+                }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="designPrice" label="设计制作(元)" width="120" align="right">
+              <template #default="{ row }">￥{{ formatNumber(row.designPrice) }}</template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
+            <el-table-column label="操作" min-width="120" align="center" fixed="right">
+              <template #default="{ row, $index }">
+                <el-button link class="edit-btn" @click="openEditDesignDialog(row, $index)">
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-button>
+                <el-button link class="delete-btn" @click="deleteDesignItem($index)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- 服务方-搭建内容 -->
+      <div v-if="activeTab === 'build'" class="service-content">
+        <div class="service-header">
+          <h3>服务方-搭建</h3>
+          <el-button type="primary" @click="handleAddBuildItem">
+            <el-icon><Plus /></el-icon> 添加搭建项目
+          </el-button>
+        </div>
+        <el-table :data="buildList" stripe border>
+          <el-table-column prop="project" label="项目名称" width="200" />
+          <el-table-column prop="spec" label="规格/说明" />
+          <el-table-column prop="price" label="单价(元)" width="120">
+            <template #default="{ row }">￥{{ formatNumber(row.price) }}</template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === '已完成' ? 'success' : 'warning'">{{
+                row.status
+              }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" align="center">
+            <template #default="{ $index }">
+              <el-button link type="danger" size="small" @click="buildList.splice($index, 1)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 服务方-摄影内容 -->
+      <div v-if="activeTab === 'photo'" class="service-content">
+        <div class="service-header">
+          <h3>服务方-摄影</h3>
+          <el-button type="primary" @click="handleAddPhotoItem">
+            <el-icon><Plus /></el-icon> 添加摄影服务
+          </el-button>
+        </div>
+        <el-table :data="photoList" stripe border>
+          <el-table-column prop="project" label="服务项目" width="200" />
+          <el-table-column prop="spec" label="规格/说明" />
+          <el-table-column prop="price" label="单价(元)" width="120">
+            <template #default="{ row }">￥{{ formatNumber(row.price) }}</template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === '已确认' ? 'success' : 'info'">{{ row.status }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" align="center">
+            <template #default="{ $index }">
+              <el-button link type="danger" size="small" @click="photoList.splice($index, 1)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 嘉宾入住内容 -->
+      <div v-if="activeTab === 'guestStay'" class="guest-stay-content">
+        <div class="service-header">
+          <h3>嘉宾入住信息</h3>
+          <el-button type="primary" @click="handleAddGuest">
+            <el-icon><Plus /></el-icon> 添加嘉宾
+          </el-button>
+        </div>
+        <el-table :data="guestList" stripe border>
+          <el-table-column prop="name" label="嘉宾姓名" width="120" />
+          <el-table-column prop="roomType" label="房型" width="120" />
+          <el-table-column prop="roomNumber" label="房间号" width="100" />
+          <el-table-column prop="checkIn" label="入住日期" width="120" />
+          <el-table-column prop="checkOut" label="离店日期" width="120" />
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === '已入住' ? 'success' : 'info'">{{ row.status }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" align="center">
+            <template #default="{ $index }">
+              <el-button link type="danger" size="small" @click="guestList.splice($index, 1)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 接送安排内容 -->
+      <div v-if="activeTab === 'transport'" class="transport-content">
+        <div class="service-header">
+          <h3>接送安排</h3>
+          <el-button type="primary" @click="handleAddTransport">
+            <el-icon><Plus /></el-icon> 添加接送安排
+          </el-button>
+        </div>
+        <el-table :data="transportList" stripe border>
+          <el-table-column prop="guest" label="嘉宾" width="120" />
+          <el-table-column prop="type" label="接送类型" width="100" />
+          <el-table-column prop="date" label="日期" width="120" />
+          <el-table-column prop="time" label="时间" width="100" />
+          <el-table-column prop="route" label="路线" />
+          <el-table-column prop="vehicle" label="车辆" width="120" />
+          <el-table-column label="操作" width="100" align="center">
+            <template #default="{ $index }">
+              <el-button link type="danger" size="small" @click="transportList.splice($index, 1)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </div>
+
+    <!-- 新增/编辑项目弹窗（报价清单） -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" @close="resetForm">
+      <el-form :model="formData" :rules="formRules" ref="formRef" label-width="100px">
+        <el-form-item label="类别" prop="category">
+          <el-select v-model="formData.category" placeholder="请选择类别" style="width: 100%">
+            <el-option label="住宿" value="住宿" />
+            <el-option label="会场" value="会场" />
+            <el-option label="餐饮" value="餐饮" />
+            <el-option label="设备" value="设备" />
+            <el-option label="服务" value="服务" />
+            <el-option label="其他" value="其他" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="项目" prop="project">
+          <el-input v-model="formData.project" placeholder="请输入项目名称" />
+        </el-form-item>
+        <el-form-item label="规格/说明" prop="spec">
+          <el-input
+            v-model="formData.spec"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入规格说明"
+          />
+        </el-form-item>
+        <el-form-item label="单位" prop="unit">
+          <el-input v-model="formData.unit" placeholder="如：间/晚、天、餐" />
+        </el-form-item>
+        <el-form-item label="单价(元)" prop="price">
+          <el-input-number v-model="formData.price" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="数量" prop="quantity">
+          <el-input-number v-model="formData.quantity" :min="1" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="formData.remark" placeholder="备注" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSave">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 新增/编辑会议厅弹窗 -->
+    <el-dialog
+      v-model="hallDialogVisible"
+      :title="hallDialogTitle"
+      width="800px"
+      @close="resetHallForm"
+    >
+      <el-form :model="hallForm" :rules="hallRules" ref="hallFormRef" label-width="110px">
+        <el-row :gutter="20">
+          <el-col :span="12"
+            ><el-form-item label="会议厅名称" prop="name"
+              ><el-input v-model="hallForm.name" /></el-form-item
+          ></el-col>
+          <el-col :span="12"
+            ><el-form-item label="所在楼层" prop="floor"
+              ><el-input v-model="hallForm.floor" /></el-form-item
+          ></el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12"
+            ><el-form-item label="面积(㎡)" prop="area"
+              ><el-input-number
+                v-model="hallForm.area"
+                :min="0"
+                style="width: 100%" /></el-form-item
+          ></el-col>
+          <el-col :span="12"
+            ><el-form-item label="容纳人数" prop="capacity"
+              ><el-input-number
+                v-model="hallForm.capacity"
+                :min="1"
+                style="width: 100%" /></el-form-item
+          ></el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12"
+            ><el-form-item label="半天场租(元)" prop="halfDayPrice"
+              ><el-input-number
+                v-model="hallForm.halfDayPrice"
+                :min="0"
+                :precision="2"
+                style="width: 100%" /></el-form-item
+          ></el-col>
+          <el-col :span="12"
+            ><el-form-item label="全天场租(元)" prop="fullDayPrice"
+              ><el-input-number
+                v-model="hallForm.fullDayPrice"
+                :min="0"
+                :precision="2"
+                style="width: 100%" /></el-form-item
+          ></el-col>
+        </el-row>
+        <el-form-item label="布局样式" prop="layout">
+          <el-select v-model="hallForm.layout" placeholder="请选择布局样式" style="width: 100%">
+            <el-option label="剧院式" value="剧院式" />
+            <el-option label="课桌式" value="课桌式" />
+            <el-option label="U型" value="U型" />
+            <el-option label="宴会式" value="宴会式" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="配套设施" prop="facilities">
+          <el-select
+            v-model="hallForm.facilities"
+            multiple
+            filterable
+            allow-create
+            placeholder="请选择或输入"
+            style="width: 100%"
+          >
+            <el-option label="投影仪" value="投影仪" />
+            <el-option label="LED屏" value="LED屏" />
+            <el-option label="音响系统" value="音响系统" />
+            <el-option label="无线麦克风" value="无线麦克风" />
+            <el-option label="灯光控制系统" value="灯光控制系统" />
+            <el-option label="舞台" value="舞台" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="hallForm.remark" type="textarea" :rows="2" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="hallDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveHall">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 茶歇菜单编辑弹窗 -->
+    <el-dialog
+      v-model="teaBreakDialogVisible"
+      :title="teaBreakDialogTitle"
+      width="550px"
+      @close="resetTeaBreakForm"
+    >
+      <el-form
+        :model="teaBreakForm"
+        :rules="menuFormRules"
+        ref="teaBreakFormRef"
+        label-width="100px"
+      >
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="teaBreakForm.name" placeholder="请输入菜品名称" />
+        </el-form-item>
+        <el-form-item label="分类" prop="category">
+          <el-select v-model="teaBreakForm.category" placeholder="请选择分类" style="width: 100%">
+            <el-option label="饮品" value="饮品" />
+            <el-option label="点心" value="点心" />
+            <el-option label="水果" value="水果" />
+            <el-option label="零食" value="零食" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="数量/份量" prop="quantity">
+          <el-input v-model="teaBreakForm.quantity" placeholder="如：200杯、每桌1份" />
+        </el-form-item>
+        <el-form-item label="单价(元)" prop="price">
+          <el-input-number
+            v-model="teaBreakForm.price"
+            :min="0"
+            :precision="2"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="teaBreakForm.remark" placeholder="备注信息" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="teaBreakDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveTeaBreakItem">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 晚宴菜单编辑弹窗 -->
+    <el-dialog
+      v-model="dinnerDialogVisible"
+      :title="dinnerDialogTitle"
+      width="550px"
+      @close="resetDinnerForm"
+    >
+      <el-form :model="dinnerForm" :rules="menuFormRules" ref="dinnerFormRef" label-width="100px">
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="dinnerForm.name" placeholder="请输入菜品名称" />
+        </el-form-item>
+        <el-form-item label="分类" prop="category">
+          <el-select v-model="dinnerForm.category" placeholder="请选择分类" style="width: 100%">
+            <el-option label="冷菜" value="冷菜" />
+            <el-option label="汤品" value="汤品" />
+            <el-option label="热菜" value="热菜" />
+            <el-option label="主食" value="主食" />
+            <el-option label="甜品" value="甜品" />
+            <el-option label="水果" value="水果" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="数量/份量" prop="quantity">
+          <el-input v-model="dinnerForm.quantity" placeholder="如：每桌1份、每人1位" />
+        </el-form-item>
+        <el-form-item label="单价(元)" prop="price">
+          <el-input-number v-model="dinnerForm.price" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="dinnerForm.remark" placeholder="备注信息" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dinnerDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveDinnerItem">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 设计事项编辑弹窗 -->
+    <el-dialog
+      v-model="designDialogVisible"
+      :title="designDialogTitle"
+      width="700px"
+      @close="resetDesignForm"
+    >
+      <el-form :model="designForm" :rules="designFormRules" ref="designFormRef" label-width="115px">
+        <el-form-item label="事项名称" prop="itemName" label-width="115px">
+          <el-input v-model="designForm.itemName" placeholder="请输入事项名称" />
+        </el-form-item>
+        <el-form-item label="事项描述" prop="description" label-width="115px">
+          <el-input
+            v-model="designForm.description"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入规格说明"
+          />
+        </el-form-item>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="数量" prop="quantity" label-width="115px">
+              <el-input-number v-model="designForm.quantity" :min="1" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="设计制作费(元)" prop="designPrice" label-width="115px">
+              <el-input-number
+                v-model="designForm.designPrice"
+                :min="0"
+                :precision="2"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="设计方名称" prop="designerName" label-width="115px">
+              <el-input v-model="designForm.designerName" placeholder="如：karl" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="设计方电话" prop="designerPhone" label-width="115px">
+              <el-input v-model="designForm.designerPhone" placeholder="联系电话" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="搭建方名称" prop="builderName" label-width="115px">
+              <el-input v-model="designForm.builderName" placeholder="如：博文搭建有限公司" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="搭建方电话" prop="builderPhone" label-width="115px">
+              <el-input v-model="designForm.builderPhone" placeholder="联系电话" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="状态" prop="status" label-width="115px">
+          <el-select v-model="designForm.status" placeholder="请选择状态" style="width: 100%">
+            <el-option label="进行中" value="进行中" />
+            <el-option label="定稿" value="定稿" />
+            <el-option label="初稿" value="初稿" />
+            <el-option label="制作中" value="制作中" />
+            <el-option label="已完成" value="已完成" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="备注" prop="remark" label-width="115px">
+          <el-input v-model="designForm.remark" type="textarea" :rows="2" placeholder="备注信息" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="designDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveDesignItem">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 照片管理弹窗（支持多张上传） -->
+    <el-dialog
+      v-model="imageManagerVisible"
+      :title="`${currentHall?.name || '宴会厅'} - 照片管理`"
+      width="800px"
+      @close="resetImageManager"
+    >
+      <div class="image-manager">
+        <!-- 上传区域 -->
+        <div class="upload-section">
+          <div class="upload-title">添加新照片</div>
+          <el-upload
+            ref="multiUploadRef"
+            action="#"
+            list-type="picture-card"
+            :auto-upload="false"
+            :show-file-list="false"
+            :on-change="handleMultiImageChange"
+            accept="image/*"
+            multiple
+          >
+            <el-icon><Plus /></el-icon>
+          </el-upload>
+          <div class="upload-tip">支持 JPG、PNG 格式，单张不超过 5MB</div>
+        </div>
+
+        <!-- 已上传照片列表 -->
+        <div
+          class="uploaded-section"
+          v-if="tempImageList.length > 0 || (currentHall?.images && currentHall.images.length > 0)"
+        >
+          <div class="upload-title">
+            已选照片 ({{ tempImageList.length + (currentHall?.images?.length || 0) }})
+          </div>
+          <div class="image-grid">
+            <!-- 原有照片 -->
+            <div
+              v-for="(img, idx) in currentHall?.images"
+              :key="'existing-' + idx"
+              class="image-item"
+            >
+              <img :src="img.url" :alt="img.name || '宴会厅照片'" />
+              <div class="image-item-actions">
+                <el-button link class="preview-btn" @click="previewExistingImage(img.url)">
+                  <el-icon><ZoomIn /></el-icon>
+                </el-button>
+                <el-button link class="delete-btn" @click="removeExistingImage(idx)">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </div>
+            </div>
+            <!-- 新上传的临时照片 -->
+            <div v-for="(img, idx) in tempImageList" :key="'temp-' + idx" class="image-item">
+              <img :src="img.url" alt="新上传照片" />
+              <div class="image-item-actions">
+                <el-button link class="preview-btn" @click="previewTempImage(img.url)">
+                  <el-icon><ZoomIn /></el-icon>
+                </el-button>
+                <el-button link class="delete-btn" @click="removeTempImage(idx)">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-else class="empty-state">
+          <el-icon><Picture /></el-icon>
+          <span>暂无照片，请点击上方区域上传</span>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="imageManagerVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmSaveImages">确认保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 图片预览弹窗 -->
+    <el-dialog v-model="previewVisible" title="图片预览" width="800px" append-to-body>
+      <div class="preview-container">
+        <img :src="previewUrl" alt="预览图片" />
+      </div>
+    </el-dialog>
+
+    <!-- 会议管理弹窗 -->
+    <el-dialog v-model="showMeetingDialog" title="会议管理" width="800px">
+      <el-table :data="meetings" stripe>
+        <el-table-column prop="name" label="会议名称" />
+        <el-table-column prop="time" label="会议时间" width="200" />
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="{ row }"
+            ><el-tag :type="getStatusType(row.status)">{{ row.status }}</el-tag></template
+          >
+        </el-table-column>
+        <el-table-column label="操作" width="150">
+          <template #default="{ row }">
+            <el-button link @click="editMeeting(row)">编辑</el-button>
+            <el-button link class="text-danger" @click="deleteMeeting(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="showMeetingDialog = false">关闭</el-button>
+        <el-button type="primary" @click="addNewMeeting">新建会议</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, Delete, Plus, View, Printer, Select, Clock } from '@element-plus/icons-vue'
+import {
+  Edit,
+  Delete,
+  Plus,
+  Upload,
+  Download,
+  Location,
+  Phone,
+  Camera,
+  ZoomIn,
+  Picture,
+} from '@element-plus/icons-vue'
+import ConferenceNavigation from '@/components/ConferenceNavigation.vue'
 
-// 视图切换
-const currentView = ref<'list' | 'detail'>('list')
-// 酒店详情页面的活动标签
-const activeHotelTab = ref<'project' | 'menu' | 'comprehensive' | 'guests' | 'transport'>('project')
+// 类型定义
+interface MeetingItem {
+  id: number
+  index: number
+  name: string
+  location: string
+  time: string
+  status: '报名中' | '进行中' | '已结束'
+}
+interface QuoteItem {
+  id: number
+  category: string
+  project: string
+  spec: string
+  unit: string
+  price: number
+  quantity: number
+  total: number
+  remark: string
+}
+interface HallImage {
+  url: string
+  name?: string
+  uploadTime?: string
+}
+interface HallItem {
+  id: number
+  name: string
+  floor: string
+  area: number
+  capacity: number
+  halfDayPrice: number
+  fullDayPrice: number
+  layout: string
+  facilities: string[]
+  devices: string[]
+  remark: string
+  images?: HallImage[]
+}
+interface MenuItem {
+  name: string
+  category: string
+  quantity: string
+  price: number
+  remark: string
+}
+interface ServiceItem {
+  project: string
+  spec: string
+  price: number
+  status: string
+}
+interface GuestItem {
+  name: string
+  roomType: string
+  roomNumber: string
+  checkIn: string
+  checkOut: string
+  status: string
+}
+interface TransportItem {
+  guest: string
+  type: string
+  date: string
+  time: string
+  route: string
+  vehicle: string
+}
+interface TempImage {
+  url: string
+  file: File
+}
 
-// 搜索表单
-const searchForm = reactive({
-  meetingName: '',
-  hotelName: '',
-  userDate: [],
-  createDate: '',
+// 设计事项类型定义
+interface DesignItem {
+  id: number
+  itemName: string
+  description: string
+  quantity: number
+  designer: {
+    name: string
+    phone: string
+  }
+  builder: {
+    name: string
+    phone: string
+  }
+  status: string
+  designPrice: number
+  remark: string
+}
+
+// 响应式数据
+const activeTab = ref('quote')
+const selectedHotel = ref('1')
+const usageTimeRange = ref(['2025-12-04 07:00:00', '2025-12-04 21:00:00'])
+const contacts = ref(['Evan', 'Iris'])
+const showMeetingDialog = ref(false)
+
+// 酒店详情数据（根据图片）
+const hotelDetail = ref({
+  address: '上海市浦东新区张杨路777号',
+  contact: '张经理 021-58356666',
+  rooms: 30,
+  referencePrice: 680,
+  contractPrice: 580,
 })
+const hotelTotalCost = ref(185100)
 
-// 表格数据
-const meetingList = ref([
+// 会议列表
+const meetings = ref<MeetingItem[]>([
   {
     id: 1,
+    index: 1,
     name: '2025第六届上海国际船舶管理论坛',
-    hotelName: '上海',
-    userDate: '2025-12-04',
-    editors: ['Iris'],
+    location: '中国·上海',
+    time: '2025年12月04日 7:00-21:00',
+    status: '报名中',
   },
   {
     id: 2,
-    name: '普陀区航运服务集聚区-暨港航物流和海事服务产业链合作交流会',
-    hotelName: '舟山',
-    userDate: '2025-12-04',
-    editors: [],
+    index: 2,
+    name: '普陀区航运服务集聚区 - 暨港航物流和海事服务产业链合作交流会',
+    location: '中国·舟山',
+    time: '2025年12月04日 7:00-21:00',
+    status: '进行中',
   },
   {
     id: 3,
+    index: 3,
     name: '2025世界油商大会',
-    hotelName: '舟山',
-    userDate: '2025-11-21',
-    editors: ['Evan'],
+    location: '中国·舟山',
+    time: '2025年12月04日 7:00-21:00',
+    status: '已结束',
   },
   {
     id: 4,
+    index: 4,
     name: '2025散杂货船舶投资和经营论坛',
-    hotelName: '上海',
-    userDate: '2025-09-25',
-    editors: ['Iris'],
+    location: '中国·青岛',
+    time: '2025年12月04日 7:00-21:00',
+    status: '已结束',
   },
 ])
 
-// 茶歇菜单数据 - 根据图片内容
-const teaMenu = ref({
-  items: [
-    '迷你烟三文鱼开口三明治',
-    '鸡肉蘑菇塔',
-    '红茶奶冻',
-    '橙味巧克力蛋糕',
-    '曲奇',
-    '水果：金桔、草莓、无花果、青提',
-  ],
-  price: '70￥/份',
-  quantity: 100,
-  total: 7000,
-  contact: 'Iris',
-  auditor: 'MacTong',
-  status: 'pending', // 'confirmed' 或 'pending'
-})
-
-// 晚宴菜单数据 - 根据图片内容
-const dinnerMenu = ref({
-  items: [
-    '吉祥如意八美碟（卤水牛肉，金陵盐水鸭，水晶肴肉，酸菜芯，拌海蜇花，糯米糖藕，爽脆芥兰丁，十八鲜，蕾萝卜）',
-    '虫草花炖老鸭',
-    '酒酿干烧大明虾',
-  ],
-  price: '3500￥/份',
-  quantity: 10,
-  total: 35000,
-  contact: 'Iris',
-  auditor: '',
-  status: 'pending', // 'confirmed' 或 'pending'
-})
-
-// 切换菜单状态
-const toggleMenuStatus = (type: 'tea' | 'dinner') => {
-  const menu = type === 'tea' ? teaMenu.value : dinnerMenu.value
-  const newStatus = menu.status === 'confirmed' ? 'pending' : 'confirmed'
-  const statusText = newStatus === 'confirmed' ? '已确认' : '待确认'
-
-  menu.status = newStatus
-  ElMessage.success(`${type === 'tea' ? '茶歇' : '晚宴'}菜单状态已切换为${statusText}`)
-}
-
-// 分页
-const currentPage = ref(1)
-const pageSize = ref(10)
-const total = ref(800)
-
-// 酒店详情页面的项目数据
-const hotelItems = ref([
+// 报价清单数据
+const quoteList = ref<QuoteItem[]>([
   {
     id: 1,
-    projectName: '新亚厅场租赁',
-    spec: '半天+晚宴',
-    remarks: '',
-    standardPrice: '30000元',
-    preferentialPrice: '25000元',
-    contact: 'Iris',
+    category: '住宿',
+    project: '标准大床房',
+    spec: '含早餐/WiFi',
+    unit: '间/晚',
+    price: 680,
+    quantity: 20,
+    total: 13600,
+    remark: '4月17-18日',
   },
   {
     id: 2,
-    projectName: '茶歇',
-    spec: '60人',
-    remarks: '',
-    standardPrice: '120元/人',
-    preferentialPrice: '100元/人',
-    contact: 'Iris',
+    category: '住宿',
+    project: '豪华套房',
+    spec: '含早餐/行政酒廊',
+    unit: '间/晚',
+    price: 1500,
+    quantity: 5,
+    total: 7500,
+    remark: '4月17-18日',
   },
   {
     id: 3,
-    projectName: '圆桌晚宴',
-    spec: '10桌',
-    remarks: '含本地啤酒、可乐、雪碧畅饮',
-    standardPrice: '3500元/桌',
-    preferentialPrice: '3500元/桌',
-    contact: 'Iris',
+    category: '会场',
+    project: '主会议厅',
+    spec: '可容纳300人/投影/音响',
+    unit: '天',
+    price: 25000,
+    quantity: 1,
+    total: 25000,
+    remark: '4月17-18日',
   },
   {
     id: 4,
-    projectName: '标准住宿',
-    spec: '标准房型',
-    remarks: '含早餐',
-    standardPrice: '1370元',
-    preferentialPrice: '900元',
-    contact: 'Iris',
+    category: '会场',
+    project: '分会场A',
+    spec: '可容纳80人',
+    unit: '半天',
+    price: 8000,
+    quantity: 2,
+    total: 16000,
+    remark: '4月17-18日',
   },
   {
     id: 5,
-    projectName: '开放式套房',
-    spec: '豪华套房',
-    remarks: '含早餐/免费升级',
-    standardPrice: '1600元',
-    preferentialPrice: '1600元',
-    contact: 'Iris',
+    category: '餐饮',
+    project: '午餐自助',
+    spec: '中西式自助/200人份',
+    unit: '餐',
+    price: 15000,
+    quantity: 1,
+    total: 15000,
+    remark: '4月17-18日',
   },
   {
     id: 6,
-    projectName: '舞台沙发',
-    spec: '8套',
-    remarks: '',
-    standardPrice: '',
-    preferentialPrice: '',
-    contact: 'Iris',
+    category: '餐饮',
+    project: '茶歇',
+    spec: '咖啡/茶/点心',
+    unit: '次',
+    price: 5000,
+    quantity: 2,
+    total: 10000,
+    remark: '4月17-18日',
   },
   {
     id: 7,
-    projectName: 'LED屏',
-    spec: '5.44M宽*2.88M高',
-    remarks: '',
-    standardPrice: '',
-    preferentialPrice: '',
-    contact: 'Iris',
+    category: '设备',
+    project: 'LED屏租赁',
+    spec: 'P3高清/4m×3m',
+    unit: '套',
+    price: 8000,
+    quantity: 1,
+    total: 8000,
+    remark: '4月17-18日',
   },
   {
     id: 8,
-    projectName: '舞台',
-    spec: '7.2M长*2.4M宽*0.4M高',
-    remarks: '',
-    standardPrice: '',
-    preferentialPrice: '',
-    contact: 'Iris',
+    category: '服务',
+    project: '酒店礼仪',
+    spec: '6人',
+    unit: '人次',
+    price: 300,
+    quantity: 6,
+    total: 1800,
+    remark: '4月17-18日',
   },
 ])
 
-// 编辑综合事项
-const handleEditComprehensive = (type: string) => {
-  const typeMap: Record<string, string> = {
-    venue: '会议现场',
-    signage: '指示牌尺寸',
-    contact: '酒店联系',
-    contactEdit: '联系信息',
-    shipping: '收货地址',
-    billing: '账单地址',
+// 会议厅数据（根据图片）
+const hallList = ref<HallItem[]>([
+  {
+    id: 1,
+    name: '洲际宴会厅',
+    floor: '3F',
+    area: 600,
+    capacity: 400,
+    halfDayPrice: 15000,
+    fullDayPrice: 25000,
+    layout: '剧院式',
+    facilities: ['无线麦克风', 'LED屏幕', '音响系统', '灯光控制系统', '舞台'],
+    devices: ['无线麦克风', 'LED屏幕', '音响系统', '灯光控制系统', '舞台'],
+    remark: '酒店最大宴会厅，层高8米，可分隔为2个独立厅',
+    images: [
+      { url: 'https://picsum.photos/400/300?random=1', name: '宴会厅全景' },
+      { url: 'https://picsum.photos/400/300?random=2', name: '舞台视角' },
+    ],
+  },
+  {
+    id: 2,
+    name: '海景厅A',
+    floor: '5F',
+    area: 200,
+    capacity: 120,
+    halfDayPrice: 8000,
+    fullDayPrice: 14000,
+    layout: 'U型',
+    facilities: ['无线麦克风', '投影屏', '音响系统', '灯光控制系统'],
+    devices: ['无线麦克风', '投影屏', '音响系统', '灯光控制系统'],
+    remark: '高端商务洽谈/签约仪式',
+    images: [{ url: 'https://picsum.photos/400/300?random=3', name: '海景厅内景' }],
+  },
+])
+
+// 菜单数据（根据图片）
+const teaBreakMenu = ref<MenuItem[]>([
+  { name: '现磨咖啡', category: '饮品', quantity: '200杯', price: 25, remark: '美式/拿铁可选' },
+  {
+    name: '精选茶饮',
+    category: '饮品',
+    quantity: '200杯',
+    price: 18,
+    remark: '龙井/铁观音/英式红茶',
+  },
+  { name: '鲜榨果汁', category: '饮品', quantity: '200杯', price: 22, remark: '橙汁/西瓜汁' },
+  { name: '法式可颂', category: '点心', quantity: '200份', price: 15, remark: '原味/巧克力' },
+  { name: '水果塔', category: '点心', quantity: '200份', price: 20, remark: '蓝莓/草莓' },
+  { name: '三明治', category: '点心', quantity: '200份', price: 18, remark: '火腿芝士/鸡肉牛油果' },
+  { name: '时令水果拼盘', category: '水果', quantity: '200盘', price: 80, remark: '' },
+  { name: '坚果拼盘', category: '零食', quantity: '200盘', price: 50, remark: '腰果/杏仁/开心果' },
+])
+
+const dinnerMenu = ref<MenuItem[]>([
+  { name: '洲际迎宾冷盘', category: '冷菜', quantity: '每桌1份', price: 180, remark: '四拼冷盘' },
+  { name: '花胶鸡汤', category: '汤品', quantity: '每桌1盅', price: 280, remark: '' },
+  { name: '清蒸东星斑', category: '热菜', quantity: '每桌1条', price: 480, remark: '时令价格' },
+  { name: '黑松露焗龙虾', category: '热菜', quantity: '每桌1只', price: 520, remark: '' },
+  { name: '蜜汁叉烧', category: '热菜', quantity: '每桌6只', price: 160, remark: '' },
+  { name: '蒜蓉粉丝蒸扇贝', category: '热菜', quantity: '每桌1份', price: 120, remark: '' },
+  { name: '上汤时蔬', category: '热菜', quantity: '每桌1份', price: 68, remark: '' },
+  { name: '扬州炒饭', category: '主食', quantity: '每桌1份', price: 58, remark: '' },
+  { name: '精品点心双拼', category: '主食', quantity: '每桌1份', price: 68, remark: '虾饺/烧卖' },
+  { name: '芒果布丁', category: '甜品', quantity: '每桌1份', price: 48, remark: '' },
+  { name: '时令水果拼盘', category: '水果', quantity: '每桌1份', price: 88, remark: '' },
+])
+
+// 设计事项数据（根据图片）
+const designList = ref<DesignItem[]>([
+  {
+    id: 1,
+    itemName: '主背景墙',
+    description: '6m宽*3m高（加20cm包边）',
+    quantity: 1,
+    designer: { name: 'karl', phone: '17712341520' },
+    builder: { name: '博文搭建有限公司', phone: '16612343510' },
+    status: '进行中',
+    designPrice: 1500,
+    remark: '加厚白卡纸·竖式·椰亚膜 穿012银白色三股编',
+  },
+  {
+    id: 2,
+    itemName: '签到墙',
+    description: '4m宽*3m高（加20cm包边）',
+    quantity: 1,
+    designer: { name: 'karl', phone: '17712341520' },
+    builder: { name: '博文搭建有限公司', phone: '16612343510' },
+    status: '定稿',
+    designPrice: 1500,
+    remark: '',
+  },
+  {
+    id: 3,
+    itemName: '讲台包围板',
+    description: '两侧0.54m宽*1.22m高/正向0.83m宽*1.22m高',
+    quantity: 1,
+    designer: { name: 'karl', phone: '17712341520' },
+    builder: { name: '博文搭建有限公司', phone: '16612343510' },
+    status: '初稿',
+    designPrice: 1500,
+    remark: '',
+  },
+  {
+    id: 4,
+    itemName: '参会牌',
+    description: '9cm宽*13cm高',
+    quantity: 300,
+    designer: { name: 'karl', phone: '17712341520' },
+    builder: { name: '淘宝定制', phone: '16612343510' },
+    status: '制作中',
+    designPrice: 1500,
+    remark: '',
+  },
+  {
+    id: 5,
+    itemName: '资料袋',
+    description: '36cm高*26长*8cm宽',
+    quantity: 5,
+    designer: { name: '第三方设计', phone: '12345678910' },
+    builder: { name: '博文搭建有限公司', phone: '16612343510' },
+    status: '制作中',
+    designPrice: 1500,
+    remark: '',
+  },
+  {
+    id: 6,
+    itemName: '设计项打包',
+    description: '所有的设计项打包保存',
+    quantity: 1,
+    designer: { name: '', phone: '' },
+    builder: { name: '', phone: '' },
+    status: '进行中',
+    designPrice: 0,
+    remark: '百度网盘链接：www.xxxxxxx.com',
+  },
+])
+
+// 服务方数据
+const buildList = ref<ServiceItem[]>([
+  { project: '舞台搭建', spec: '主舞台+LED背景', price: 15000, status: '待搭建' },
+])
+const photoList = ref<ServiceItem[]>([
+  { project: '全程摄影', spec: '3机位+快剪', price: 12000, status: '已确认' },
+])
+const guestList = ref<GuestItem[]>([
+  {
+    name: '张三',
+    roomType: '标准大床房',
+    roomNumber: '1808',
+    checkIn: '12-04',
+    checkOut: '12-06',
+    status: '未入住',
+  },
+])
+const transportList = ref<TransportItem[]>([
+  {
+    guest: '张三',
+    type: '接机',
+    date: '12-04',
+    time: '10:00',
+    route: '浦东机场→酒店',
+    vehicle: '别克GL8',
+  },
+])
+
+// 计算属性
+const totalAmount = computed(() => quoteList.value.reduce((sum, item) => sum + item.total, 0))
+const designTotalCost = computed(() =>
+  designList.value.reduce((sum, item) => sum + (item.designPrice || 0), 0),
+)
+const costCategories = computed(() => {
+  const categories = ['住宿', '会场', '餐饮', '设备', '服务', '其他']
+  return categories.map((name) => ({
+    name,
+    amount: quoteList.value.filter((i) => i.category === name).reduce((s, i) => s + i.total, 0),
+  }))
+})
+
+// 报价清单弹窗
+const dialogVisible = ref(false)
+const dialogTitle = ref('新增项目')
+const editingId = ref<number | null>(null)
+const formRef = ref()
+const formData = ref({
+  category: '',
+  project: '',
+  spec: '',
+  unit: '',
+  price: 0,
+  quantity: 1,
+  remark: '',
+})
+const formRules = {
+  category: [{ required: true }],
+  project: [{ required: true }],
+  price: [{ required: true }],
+  quantity: [{ required: true }],
+}
+
+// 会议厅弹窗
+const hallDialogVisible = ref(false)
+const hallDialogTitle = ref('新增会议厅')
+const editingHallId = ref<number | null>(null)
+const hallFormRef = ref()
+const hallForm = ref({
+  name: '',
+  floor: '',
+  area: 0,
+  capacity: 0,
+  halfDayPrice: 0,
+  fullDayPrice: 0,
+  layout: '',
+  facilities: [] as string[],
+  remark: '',
+})
+const hallRules = {
+  name: [{ required: true, message: '请输入会议厅名称' }],
+  floor: [{ required: true, message: '请输入楼层' }],
+  area: [{ required: true, message: '请输入面积' }],
+  capacity: [{ required: true, message: '请输入容纳人数' }],
+  halfDayPrice: [{ required: true, message: '请输入半天场租' }],
+  fullDayPrice: [{ required: true, message: '请输入全天场租' }],
+}
+
+// 茶歇菜单弹窗
+const teaBreakDialogVisible = ref(false)
+const teaBreakDialogTitle = ref('新增茶歇项')
+const teaBreakFormRef = ref()
+const teaBreakForm = ref({
+  name: '',
+  category: '',
+  quantity: '',
+  price: 0,
+  remark: '',
+})
+const editingTeaBreakIndex = ref<number | null>(null)
+
+// 晚宴菜单弹窗
+const dinnerDialogVisible = ref(false)
+const dinnerDialogTitle = ref('新增晚宴项')
+const dinnerFormRef = ref()
+const dinnerForm = ref({
+  name: '',
+  category: '',
+  quantity: '',
+  price: 0,
+  remark: '',
+})
+const editingDinnerIndex = ref<number | null>(null)
+
+// 菜单表单校验规则
+const menuFormRules = {
+  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+  category: [{ required: true, message: '请选择分类', trigger: 'change' }],
+  quantity: [{ required: true, message: '请输入数量/份量', trigger: 'blur' }],
+  price: [{ required: true, message: '请输入单价', trigger: 'blur' }],
+}
+
+// 设计事项弹窗
+const designDialogVisible = ref(false)
+const designDialogTitle = ref('新增设计事项')
+const designFormRef = ref()
+const editingDesignIndex = ref<number | null>(null)
+const designForm = ref({
+  itemName: '',
+  description: '',
+  quantity: 1,
+  designerName: '',
+  designerPhone: '',
+  builderName: '',
+  builderPhone: '',
+  status: '',
+  designPrice: 0,
+  remark: '',
+})
+const designFormRules = {
+  itemName: [{ required: true, message: '请输入事项名称', trigger: 'blur' }],
+  quantity: [{ required: true, message: '请输入数量', trigger: 'blur' }],
+  designPrice: [{ required: true, message: '请输入设计制作费', trigger: 'blur' }],
+}
+
+// 照片管理相关
+const imageManagerVisible = ref(false)
+const currentHall = ref<HallItem | null>(null)
+const tempImageList = ref<TempImage[]>([])
+const previewVisible = ref(false)
+const previewUrl = ref('')
+
+// 辅助函数
+const formatNumber = (num: number) => num.toLocaleString()
+const getStatusType = (status: string) =>
+  ({ 报名中: 'success', 进行中: 'warning', 已结束: 'info' })[status] || ''
+const getCategoryTagType = (category: string) =>
+  ({ 住宿: 'primary', 会场: 'success', 餐饮: 'warning', 设备: 'danger', 服务: 'info' })[category] ||
+  ''
+const getDesignStatusType = (status: string) => {
+  const map: Record<string, string> = {
+    进行中: 'warning',
+    定稿: 'success',
+    初稿: 'info',
+    制作中: 'primary',
+    已完成: 'success',
   }
-  ElMessage.info(`编辑${typeMap[type] || type}信息功能开发中`)
+  return map[status] || 'info'
 }
 
-// 视图切换
-const switchView = (view: 'list' | 'detail') => {
-  currentView.value = view
+// 标签切换
+const handleTabChange = (tab: string) => {
+  activeTab.value = tab
 }
 
-// 搜索
-const handleSearch = () => {
-  ElMessage.success('搜索功能开发中')
-  console.log('搜索条件:', searchForm)
+// 会议操作
+const handleMeetingChange = (meetingId: number) => {
+  console.log('会议切换', meetingId)
 }
-
-// 重置搜索
-const resetSearch = () => {
-  searchForm.meetingName = ''
-  searchForm.hotelName = ''
-  searchForm.createDate = ''
-  ElMessage.success('已重置')
-}
-
-// 新增会议
-const handleAdd = () => {
-  ElMessage.info('新增会议功能开发中')
-}
-
-// 编辑
-const handleEdit = (row: any) => {
-  ElMessage.info(`编辑会议: ${row.name}`)
-}
-
-// 删除
-const handleDelete = (row: any) => {
-  ElMessageBox.confirm(`确认删除会议"${row.name}"吗？`, '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
+const editMeeting = (row: MeetingItem) => ElMessage.info(`编辑会议: ${row.name}`)
+const deleteMeeting = (row: MeetingItem) =>
+  ElMessageBox.confirm(`确定删除"${row.name}"？`, '提示', { type: 'warning' })
     .then(() => {
+      const idx = meetings.value.findIndex((m) => m.id === row.id)
+      if (idx !== -1) meetings.value.splice(idx, 1)
       ElMessage.success('删除成功')
     })
     .catch(() => {})
-}
+const addNewMeeting = () => ElMessage.info('新建会议功能开发中')
 
-// 查看
-const handleView = (row: any) => {
-  ElMessage.info(`查看会议详情: ${row.name}`)
-  switchView('detail')
-}
-
-// 打印
-const handlePrint = (row: any) => {
-  ElMessage.info(`打印议程: ${row.name}`)
-}
-
-// 分页大小变化
-const handleSizeChange = (val: number) => {
-  pageSize.value = val
-  ElMessage.info(`每页显示 ${val} 条`)
-}
-
-// 当前页变化
-const handleCurrentChange = (val: number) => {
-  currentPage.value = val
-  ElMessage.info(`跳转到第 ${val} 页`)
-}
-
-// 酒店详情页操作
-const handleEditHotel = () => {
-  ElMessage.info('编辑酒店信息功能开发中')
-}
-
-const handleDeleteHotel = () => {
-  ElMessageBox.confirm('确认删除该酒店吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      ElMessage.success('删除成功')
-      currentView.value = 'list'
+// 酒店配置操作
+const handleImportHotel = () => ElMessage.info('导入酒店功能开发中')
+const handleRemoveHotel = () =>
+  ElMessageBox.confirm('确定移除当前酒店？', '提示', { type: 'warning' })
+    .then(() => ElMessage.success('已移除'))
+    .catch(() => {})
+const addContact = () =>
+  ElMessageBox.prompt('请输入负责人姓名', '添加对接人')
+    .then(({ value }) => {
+      if (value) contacts.value.push(value)
     })
     .catch(() => {})
-}
+const removeContact = (idx: number) => contacts.value.splice(idx, 1)
+const handleExportList = () => ElMessage.success('导出成功')
 
-// 项目操作
-const handleEditItem = (row: any) => {
-  ElMessage.info(`编辑项目: ${row.projectName}`)
+// 报价清单操作
+const handleImportExcel = () => ElMessage.info('导入Excel功能开发中')
+const handleAddItem = () => {
+  dialogTitle.value = '新增项目'
+  editingId.value = null
+  resetForm()
+  dialogVisible.value = true
 }
-
-const handleViewItem = (row: any) => {
-  ElMessage.info(`查看项目: ${row.projectName}`)
+const handleEditItem = (row: QuoteItem) => {
+  dialogTitle.value = '编辑项目'
+  editingId.value = row.id
+  formData.value = { ...row }
+  dialogVisible.value = true
 }
-
-const handleDeleteItem = (row: any) => {
-  ElMessageBox.confirm(`确认删除项目"${row.projectName}"吗？`, '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
+const handleDeleteItem = (row: QuoteItem) =>
+  ElMessageBox.confirm(`确定删除"${row.project}"？`, '提示', { type: 'warning' })
     .then(() => {
+      const idx = quoteList.value.findIndex((i) => i.id === row.id)
+      if (idx !== -1) quoteList.value.splice(idx, 1)
       ElMessage.success('删除成功')
     })
     .catch(() => {})
+const handleDeleteImport = () =>
+  ElMessageBox.confirm('确定删除所有导入的项目？', '提示', { type: 'warning' })
+    .then(() => {
+      quoteList.value = quoteList.value.filter((i) => i.id <= 8)
+      ElMessage.success('已删除导入项目')
+    })
+    .catch(() => {})
+const handleSave = async () => {
+  if (!formRef.value) return
+  await formRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const newItem: QuoteItem = {
+        ...formData.value,
+        id: editingId.value || Math.max(...quoteList.value.map((i) => i.id), 0) + 1,
+        total: formData.value.price * formData.value.quantity,
+      }
+      if (editingId.value) {
+        const idx = quoteList.value.findIndex((i) => i.id === editingId.value)
+        if (idx !== -1) quoteList.value[idx] = newItem
+        ElMessage.success('编辑成功')
+      } else {
+        quoteList.value.push(newItem)
+        ElMessage.success('新增成功')
+      }
+      dialogVisible.value = false
+    }
+  })
 }
-
-// 菜单操作
-const handleEditMenu = (type: 'tea' | 'dinner') => {
-  ElMessage.info(`编辑${type === 'tea' ? '茶歇' : '晚宴'}菜单`)
-}
-
-const handlePrintMenu = (type: 'tea' | 'dinner') => {
-  ElMessage.info(`打印${type === 'tea' ? '茶歇' : '晚宴'}菜单`)
-}
-
-// 编辑嘉宾信息
-const handleEditGuest = (id: number) => {
-  ElMessage.info(`编辑嘉宾信息功能开发中，嘉宾ID: ${id}`)
-}
-
-// 编辑接送信息
-const handleEditTransport = (type: string, id?: number) => {
-  const typeMap: Record<string, string> = {
-    guest: '嘉宾信息',
-    schedule: '行程安排',
-    basic: '基本信息',
+const resetForm = () => {
+  formData.value = {
+    category: '',
+    project: '',
+    spec: '',
+    unit: '',
+    price: 0,
+    quantity: 1,
+    remark: '',
   }
-  const idText = id ? ` ID: ${id}` : ''
-  ElMessage.info(`编辑${typeMap[type] || type}信息功能开发中${idText}`)
+  formRef.value?.clearValidate()
 }
 
-// 添加晚宴
-const handleAddDinner = () => {
-  ElMessage.info('添加晚宴功能开发中')
+// 会议厅操作
+const handleAddHall = () => {
+  hallDialogTitle.value = '新增会议厅'
+  editingHallId.value = null
+  resetHallForm()
+  hallDialogVisible.value = true
 }
+const handleEditHall = (hall: HallItem) => {
+  hallDialogTitle.value = '编辑会议厅'
+  editingHallId.value = hall.id
+  hallForm.value = {
+    name: hall.name,
+    floor: hall.floor,
+    area: hall.area,
+    capacity: hall.capacity,
+    halfDayPrice: hall.halfDayPrice,
+    fullDayPrice: hall.fullDayPrice,
+    layout: hall.layout,
+    facilities: [...(hall.facilities || hall.devices || [])],
+    remark: hall.remark,
+  }
+  hallDialogVisible.value = true
+}
+const handleDeleteHall = (hall: HallItem) => {
+  ElMessageBox.confirm(`确定删除"${hall.name}"？`, '提示', { type: 'warning' })
+    .then(() => {
+      const idx = hallList.value.findIndex((h) => h.id === hall.id)
+      if (idx !== -1) hallList.value.splice(idx, 1)
+      ElMessage.success('删除成功')
+    })
+    .catch(() => {})
+}
+const saveHall = async () => {
+  if (!hallFormRef.value) return
+  await hallFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const existingHall = editingHallId.value
+        ? hallList.value.find((h) => h.id === editingHallId.value)
+        : null
+      const newHall: HallItem = {
+        id: editingHallId.value || Math.max(...hallList.value.map((h) => h.id), 0) + 1,
+        ...hallForm.value,
+        devices: [...hallForm.value.facilities],
+        images: existingHall?.images || [],
+      }
+      if (editingHallId.value) {
+        const idx = hallList.value.findIndex((h) => h.id === editingHallId.value)
+        if (idx !== -1) hallList.value[idx] = newHall
+        ElMessage.success('编辑成功')
+      } else {
+        hallList.value.push(newHall)
+        ElMessage.success('新增成功')
+      }
+      hallDialogVisible.value = false
+    }
+  })
+}
+const resetHallForm = () => {
+  hallForm.value = {
+    name: '',
+    floor: '',
+    area: 0,
+    capacity: 0,
+    halfDayPrice: 0,
+    fullDayPrice: 0,
+    layout: '',
+    facilities: [],
+    remark: '',
+  }
+  hallFormRef.value?.clearValidate()
+}
+
+// 茶歇菜单操作
+const openAddTeaBreakDialog = () => {
+  teaBreakDialogTitle.value = '新增茶歇项'
+  editingTeaBreakIndex.value = null
+  resetTeaBreakForm()
+  teaBreakDialogVisible.value = true
+}
+const openEditTeaBreakDialog = (row: MenuItem, index: number) => {
+  teaBreakDialogTitle.value = '编辑茶歇项'
+  editingTeaBreakIndex.value = index
+  teaBreakForm.value = { ...row }
+  teaBreakDialogVisible.value = true
+}
+const saveTeaBreakItem = async () => {
+  if (!teaBreakFormRef.value) return
+  await teaBreakFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const newItem: MenuItem = { ...teaBreakForm.value }
+      if (editingTeaBreakIndex.value !== null) {
+        teaBreakMenu.value[editingTeaBreakIndex.value] = newItem
+        ElMessage.success('编辑成功')
+      } else {
+        teaBreakMenu.value.push(newItem)
+        ElMessage.success('新增成功')
+      }
+      teaBreakDialogVisible.value = false
+    }
+  })
+}
+const resetTeaBreakForm = () => {
+  teaBreakForm.value = {
+    name: '',
+    category: '',
+    quantity: '',
+    price: 0,
+    remark: '',
+  }
+  teaBreakFormRef.value?.clearValidate()
+}
+
+// 晚宴菜单操作
+const openAddDinnerDialog = () => {
+  dinnerDialogTitle.value = '新增晚宴项'
+  editingDinnerIndex.value = null
+  resetDinnerForm()
+  dinnerDialogVisible.value = true
+}
+const openEditDinnerDialog = (row: MenuItem, index: number) => {
+  dinnerDialogTitle.value = '编辑晚宴项'
+  editingDinnerIndex.value = index
+  dinnerForm.value = { ...row }
+  dinnerDialogVisible.value = true
+}
+const saveDinnerItem = async () => {
+  if (!dinnerFormRef.value) return
+  await dinnerFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const newItem: MenuItem = { ...dinnerForm.value }
+      if (editingDinnerIndex.value !== null) {
+        dinnerMenu.value[editingDinnerIndex.value] = newItem
+        ElMessage.success('编辑成功')
+      } else {
+        dinnerMenu.value.push(newItem)
+        ElMessage.success('新增成功')
+      }
+      dinnerDialogVisible.value = false
+    }
+  })
+}
+const resetDinnerForm = () => {
+  dinnerForm.value = {
+    name: '',
+    category: '',
+    quantity: '',
+    price: 0,
+    remark: '',
+  }
+  dinnerFormRef.value?.clearValidate()
+}
+
+// 设计事项操作
+const handleImportDesignExcel = () => ElMessage.info('导入Excel功能开发中')
+const handleDeleteDesignImport = () =>
+  ElMessageBox.confirm('确定删除所有导入的设计事项？', '提示', { type: 'warning' })
+    .then(() => {
+      designList.value = designList.value.filter((item) => item.id <= 6)
+      ElMessage.success('已删除导入事项')
+    })
+    .catch(() => {})
+const openAddDesignDialog = () => {
+  designDialogTitle.value = '新增设计事项'
+  editingDesignIndex.value = null
+  resetDesignForm()
+  designDialogVisible.value = true
+}
+const openEditDesignDialog = (row: DesignItem, index: number) => {
+  designDialogTitle.value = '编辑设计事项'
+  editingDesignIndex.value = index
+  designForm.value = {
+    itemName: row.itemName,
+    description: row.description,
+    quantity: row.quantity,
+    designerName: row.designer.name,
+    designerPhone: row.designer.phone,
+    builderName: row.builder.name,
+    builderPhone: row.builder.phone,
+    status: row.status,
+    designPrice: row.designPrice,
+    remark: row.remark,
+  }
+  designDialogVisible.value = true
+}
+const deleteDesignItem = (index: number) => {
+  ElMessageBox.confirm(`确定删除"${designList.value[index].itemName}"？`, '提示', {
+    type: 'warning',
+  })
+    .then(() => {
+      designList.value.splice(index, 1)
+      ElMessage.success('删除成功')
+    })
+    .catch(() => {})
+}
+const saveDesignItem = async () => {
+  if (!designFormRef.value) return
+  await designFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const newItem: DesignItem = {
+        id:
+          editingDesignIndex.value !== null
+            ? designList.value[editingDesignIndex.value].id
+            : Math.max(...designList.value.map((i) => i.id), 0) + 1,
+        itemName: designForm.value.itemName,
+        description: designForm.value.description,
+        quantity: designForm.value.quantity,
+        designer: {
+          name: designForm.value.designerName,
+          phone: designForm.value.designerPhone,
+        },
+        builder: {
+          name: designForm.value.builderName,
+          phone: designForm.value.builderPhone,
+        },
+        status: designForm.value.status,
+        designPrice: designForm.value.designPrice,
+        remark: designForm.value.remark,
+      }
+      if (editingDesignIndex.value !== null) {
+        designList.value[editingDesignIndex.value] = newItem
+        ElMessage.success('编辑成功')
+      } else {
+        designList.value.push(newItem)
+        ElMessage.success('新增成功')
+      }
+      designDialogVisible.value = false
+    }
+  })
+}
+const resetDesignForm = () => {
+  designForm.value = {
+    itemName: '',
+    description: '',
+    quantity: 1,
+    designerName: '',
+    designerPhone: '',
+    builderName: '',
+    builderPhone: '',
+    status: '',
+    designPrice: 0,
+    remark: '',
+  }
+  designFormRef.value?.clearValidate()
+}
+
+// 照片管理操作
+const handleOpenImageManager = (hall: HallItem) => {
+  currentHall.value = hall
+  tempImageList.value = []
+  imageManagerVisible.value = true
+}
+
+const handleMultiImageChange = (file: any) => {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    tempImageList.value.push({
+      url: e.target?.result as string,
+      file: file.raw,
+    })
+  }
+  reader.readAsDataURL(file.raw)
+}
+
+const removeExistingImage = (idx: number) => {
+  if (currentHall.value && currentHall.value.images) {
+    currentHall.value.images.splice(idx, 1)
+  }
+}
+
+const removeTempImage = (idx: number) => {
+  tempImageList.value.splice(idx, 1)
+}
+
+const previewExistingImage = (url: string) => {
+  previewUrl.value = url
+  previewVisible.value = true
+}
+
+const previewTempImage = (url: string) => {
+  previewUrl.value = url
+  previewVisible.value = true
+}
+
+const handlePreviewImage = (hall: HallItem, imgIdx: number) => {
+  if (hall.images && hall.images[imgIdx]) {
+    previewUrl.value = hall.images[imgIdx].url
+    previewVisible.value = true
+  }
+}
+
+const resetImageManager = () => {
+  tempImageList.value = []
+  currentHall.value = null
+}
+
+const confirmSaveImages = () => {
+  if (currentHall.value) {
+    // 添加新上传的图片
+    const newImages = tempImageList.value.map((temp, idx) => ({
+      url: temp.url,
+      name: `宴会厅照片_${Date.now()}_${idx}`,
+      uploadTime: new Date().toISOString(),
+    }))
+
+    if (!currentHall.value.images) {
+      currentHall.value.images = []
+    }
+    currentHall.value.images.push(...newImages)
+
+    ElMessage.success(`成功保存 ${newImages.length} 张照片`)
+    imageManagerVisible.value = false
+    tempImageList.value = []
+  }
+}
+
+// 服务方操作
+const handleAddBuildItem = () =>
+  buildList.value.push({ project: '新项目', spec: '', price: 0, status: '待搭建' })
+const handleAddPhotoItem = () =>
+  photoList.value.push({ project: '新服务', spec: '', price: 0, status: '待确认' })
+const handleAddGuest = () =>
+  guestList.value.push({
+    name: '新嘉宾',
+    roomType: '标准间',
+    roomNumber: '',
+    checkIn: '',
+    checkOut: '',
+    status: '未入住',
+  })
+const handleAddTransport = () =>
+  transportList.value.push({ guest: '', type: '接机', date: '', time: '', route: '', vehicle: '' })
 </script>
 
 <style scoped>
-.agenda-container {
+.agenda-page {
+  min-height: 100vh;
+  background: #f5f7fa;
   padding: 10px;
-  background-color: white;
-  height: 100%;
 }
-
-.view-tabs {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e4e7ed;
-  padding-bottom: 10px;
-}
-
-.tab-item {
-  font-size: 16px;
-  font-weight: 500;
-  color: #606266;
-  cursor: pointer;
-  padding: 8px 0;
-  position: relative;
-  transition: color 0.3s;
-}
-
-.tab-item:hover {
-  color: #409eff;
-}
-
-.tab-item.active {
-  color: #409eff;
-}
-
-.tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: -11px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #409eff;
-}
-
-.content-card {
+.hotel-config-card {
   background: white;
-  border-radius: 8px;
-  padding: 14px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
-
-/* 搜索区域样式 */
-.search-section {
-  margin-bottom: 30px;
-  background: white;
-  border-radius: 8px;
-}
-
-.search-row {
+.config-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.hotel-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hotel-selector .label {
+  font-size: 14px;
+  color: #666;
+}
+.hotel-select {
+  width: 240px;
+}
+.import-btn {
+  color: #1890ff;
+}
+.remove-btn {
+  color: #ff4d4f;
+}
+.hotel-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.config-body {
+  padding: 10px;
+}
+.config-row {
+  display: flex;
+  gap: 40px;
+  margin-bottom: 4px;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 20px;
 }
-
-.search-item {
+.config-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
-
-.search-item label {
+.config-item .label {
   font-size: 14px;
-  color: #606266;
-  font-weight: 500;
-}
-
-/* 表格区域 */
-.table-section {
-  margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-}
-
-.el-table {
-  margin-bottom: 16px;
-}
-
-/* 表格底部样式 */
-.table-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding: 8px 0;
-}
-
-.add-form-button {
-  flex-shrink: 0;
-}
-
-.pagination-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.pagination-info {
-  font-size: 14px;
-  color: #606266;
+  color: #666;
   white-space: nowrap;
 }
-
-/* 酒店详情头部 */
-.detail-header {
-  margin-bottom: 20px;
+.time-range-picker {
+  width: 380px;
 }
-
-.header-title-row {
+.contact-list {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-}
-
-.header-title-row h1 {
-  font-size: 24px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin: 0;
-}
-
-.header-actions {
-  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
-
-/* 酒店事项分类标签 */
-.hotel-tabs {
-  display: flex;
-  gap: 4px;
-  margin: 20px 0;
-  border-bottom: 2px solid #e4e7ed;
-  padding-bottom: 0;
+.contact-tag {
+  background: #f5f5f5;
+  border: none;
 }
-
-.hotel-tab-item {
-  padding: 10px 24px;
-  font-size: 15px;
+.add-contact-btn {
+  color: #1890ff;
+}
+.export-list-btn {
+  color: #52c41a;
+}
+.hotel-detail-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 32px;
+}
+.hotel-address,
+.hotel-contact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 14px;
+}
+.hotel-rooms {
+  display: flex;
+  gap: 16px;
+  color: #666;
+  font-size: 14px;
+}
+.price-info {
+  color: #fa8c16;
+}
+.contract-price {
+  color: #52c41a;
   font-weight: 500;
-  color: #606266;
-  cursor: pointer;
-  position: relative;
-  transition: all 0.3s;
-  border-radius: 4px 4px 0 0;
 }
-
-.hotel-tab-item:hover {
-  color: #409eff;
-  background-color: #ecf5ff;
+.total-cost {
+  margin-left: auto;
 }
-
-.hotel-tab-item.active {
-  color: #409eff;
+.total-cost .label {
+  font-size: 14px;
+  color: #666;
+}
+.total-cost .cost-value {
+  font-size: 20px;
   font-weight: 600;
+  color: #fa8c16;
 }
-
-.hotel-tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #409eff;
-  z-index: 1;
+.tabs-nav {
+  background: white;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  padding: 0 20px;
 }
-
-/* 酒店事项表格 */
-.hotel-items-table {
-  margin-top: 20px;
+.custom-tabs :deep(.el-tabs__header) {
+  margin: 0;
 }
-
-/* 餐饮菜单样式 */
-/* 餐饮菜单样式 */
-.menu-container {
-  margin-top: 20px;
+.custom-tabs :deep(.el-tabs__active-bar) {
+  background-color: #1890ff;
+}
+.custom-tabs :deep(.el-tabs__item.is-active) {
+  color: #1890ff;
+}
+.tabs-content {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  min-height: 500px;
+}
+.cost-overview {
+  margin-bottom: 20px;
+}
+.cost-cards {
   display: flex;
-  justify-content: flex-start;
-  gap: 30px;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
 }
-
-.menu-section {
-  width: 433px;
-  height: 600px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 1);
-  border: 1px solid rgba(241, 242, 244, 1);
+.cost-card {
+  flex: 1;
+  min-width: 120px;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s;
+}
+.cost-card:hover {
+  border-color: #1890ff;
+}
+.card-info {
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
-
-.menu-header {
+.card-name {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 4px;
+}
+.card-amount {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+.total-card .card-amount {
+  color: #fa8c16;
+  font-size: 20px;
+}
+.action-buttons {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background-color: #f5f7fa;
-  border-bottom: 1px solid #ebeef5;
+}
+.btn-add-item {
+  background: #1890ff;
+  border-color: #1890ff;
+}
+.quote-table-wrapper {
+  overflow-x: auto;
+}
+.btn-edit-table {
+  color: #1890ff;
+}
+.btn-delete-table {
+  color: red;
 }
 
-.menu-header h2 {
+/* 会议厅信息 */
+.hall-info-content {
+  display: flex;
+  gap: 24px;
+}
+
+.hall-card-detail {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e8e8e8;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.hall-card-detail:hover {
+  border-color: #1890ff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.hall-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.hall-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hall-name {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: #1a1a1a;
 }
 
-.menu-actions {
+.hall-floor {
+  font-size: 13px;
+  color: #999;
+  background: #f5f5f5;
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+
+.hall-actions {
   display: flex;
-  gap: 8px;
-}
-
-/* 修改：将menu-content改为flex列布局，撑满整个section */
-.menu-content {
-  display: flex;
-  flex-direction: column;
-  height: calc(100% - 53px); /* 减去header的高度 */
-  padding: 16px;
-  box-sizing: border-box;
-}
-
-/* 顶部：菜单项区域，占据剩余空间 */
-.menu-items {
-  flex: 1;
-  overflow-y: auto; /* 如果菜单项太多，可以滚动 */
-  margin-bottom: 16px;
-}
-
-.menu-item {
-  font-size: 17.06px;
-  font-weight: 400;
-  letter-spacing: 0.21px;
-  line-height: 32px;
-  color: rgba(113, 128, 150, 1);
-  text-align: left;
-  vertical-align: top;
-  padding: 2px 0;
-}
-
-/* 底部：价格和对接人信息区域 */
-.menu-bottom {
-  flex-shrink: 0;
-  border-top: 1px solid rgba(241, 242, 244, 1);
-  padding-top: 12px;
-}
-
-.menu-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.price-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
-}
-
-.price-info .label {
-  font-size: 17.06px;
-  font-weight: 400;
-  letter-spacing: 0.32px;
-  line-height: 25.59px;
-  color: rgba(17, 24, 39, 1);
-}
-
-.price-info .value {
-  font-size: 17.06px;
-  font-weight: 400;
-  letter-spacing: 0.32px;
-  line-height: 25.59px;
-  color: rgba(17, 24, 39, 1);
-}
-
-.price-info .value.total {
-  color: #f56c6c;
-  font-weight: 600;
-}
-
-.menu-contact {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  flex-wrap: wrap;
   gap: 4px;
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 29.85px;
-  color: rgba(17, 24, 39, 1);
 }
 
-.menu-contact .value {
-  font-size: 16px;
-  font-weight: 400;
-  color: rgba(54, 134, 255, 1);
+.hall-edit-btn {
+  color: #1890ff;
+  padding: 4px;
 }
 
-.status-tag {
-  font-size: 16px;
-  font-weight: 400;
-  color: rgba(54, 134, 255, 1);
-  margin-left: 8px;
+.hall-delete-btn {
+  color: #ff4d4f;
+  padding: 4px;
 }
 
-/* 状态标签样式 */
-.status-confirmed {
-  color: #67c23a;
+/* 信息网格 - 两列布局 */
+.hall-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 24px;
+  margin-bottom: 20px;
 }
 
-.status-pending {
-  color: #e6a23c;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .menu-container {
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .menu-section {
-    width: 100%;
-    height: auto;
-    min-height: 500px;
-  }
-
-  .menu-content {
-    height: auto;
-  }
-
-  .menu-items {
-    max-height: 300px;
-  }
-}
-
-.menu-item {
-  font-size: 17.06px;
-  font-weight: 400;
-  letter-spacing: 0.21px;
-  line-height: 32px;
-  color: rgba(113, 128, 150, 1);
-  text-align: left;
-  vertical-align: top;
-}
-
-.menu-item:last-child {
-  border-bottom: none;
-}
-
-.menu-footer {
+.detail-item {
   display: flex;
-  flex-direction: column;
-  /* justify-content: flex-end; */
-  gap: 40px;
-  padding: 12px 0;
-  border-top: 1px solid #ebeef5;
-  border-bottom: 1px solid #ebeef5;
-  margin-bottom: 12px;
-  width: 391px;
-  /* left: 287px;
-  top: 805px;
-  width: 391px;
-  height: 0px;
-  opacity: 1; */
-  transform: rotate(0.15deg);
-
-  border: 1.07px solid rgba(241, 242, 244, 1);
+  align-items: baseline;
+  gap: 12px;
 }
 
-.price-info {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0px 10px;
+.detail-item-full {
+  grid-column: span 2;
 }
 
-.price-info .label {
-  font-size: 17.06px;
-  font-weight: 400;
-  letter-spacing: 0.32px;
-  line-height: 25.59px;
-  color: rgba(17, 24, 39, 1);
-  text-align: left;
-  vertical-align: middle;
+.detail-label {
+  width: 44px;
+  font-size: 13px;
+  color: #999;
+  flex-shrink: 0;
 }
 
-.price-info .value {
-  font-size: 17.06px;
-  font-weight: 400;
-  letter-spacing: 0.32px;
-  line-height: 25.59px;
-  color: rgba(17, 24, 39, 1);
-  text-align: left;
-  vertical-align: middle;
-}
-
-.price-info .value.total {
-  color: #f56c6c;
-  font-weight: 600;
-}
-
-.menu-contact {
-  font-size: 16px;
-  font-weight: 400;
-  letter-spacing: 0px;
-  line-height: 29.85px;
-  color: rgba(17, 24, 39, 1);
-  text-align: right;
-  vertical-align: middle;
-}
-
-/* .menu-contact .label {
-  color: #909399;
-} */
-
-.menu-contact .value {
+.detail-value {
   font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 0px;
-  line-height: 29.85px;
-  color: rgba(54, 134, 255, 1);
-  text-align: center;
-  vertical-align: top;
-}
-.status-tag {
-  font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 0px;
-  line-height: 29.85px;
-  color: rgba(54, 134, 255, 1);
-  text-align: center;
-  vertical-align: top;
-}
-
-/* 占位内容样式 */
-.placeholder-content {
-  margin-top: 30px;
-  padding: 40px 0;
-}
-
-/* 编辑者名字样式 */
-.editors-container {
-  display: flex;
-  align-items: center;
-}
-
-.editors-list {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.editor-item {
-  padding: 2px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(54, 134, 255, 1);
-  font-size: 12px;
-  color: rgba(54, 134, 255, 1);
-  background-color: rgba(54, 134, 255, 0.1);
-  white-space: nowrap;
-}
-
-/* 表格样式调整 */
-:deep(.el-table th) {
-  background-color: #f5f7fa;
-  color: #606266;
-  font-weight: 600;
-  font-size: 14px;
-  padding: 12px 0;
-}
-
-:deep(.el-table td) {
-  padding: 10px 0;
-}
-
-:deep(.el-table .cell) {
+  color: #333;
+  flex: 1;
   line-height: 1.5;
 }
 
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .hotel-tabs {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .hotel-tab-item {
-    padding: 8px 16px;
-    font-size: 14px;
-  }
-
-  .header-title-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .menu-footer {
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-end;
-  }
-
-  .menu-contact {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 8px;
-  }
-}
-
-/* 综合事项样式 */
-.comprehensive-container {
-  /* margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px; */
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-start;
-  gap: 30px;
-}
-.conference-venue {
-  background: #ffffff;
-  border: 1px solid #ebeef5;
+/* 画廊样式 */
+.hall-gallery {
+  margin: 16px 0;
   border-radius: 8px;
-  padding: 20px;
-  left: 259px;
-  top: 240px;
-  width: 718px;
-  height: 618px;
-  opacity: 1;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 1);
-  border: 1px solid rgba(241, 242, 244, 1);
-}
-.comprehensive-section {
-  background: #ffffff;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  padding: 20px;
-  left: 0px;
-  top: 0px;
-  width: 395px;
-  height: 618px;
-  opacity: 1;
-  border-radius: 17.12px;
-  background: rgba(255, 255, 255, 1);
+  background: #fafafa;
+  padding: 12px;
 }
 
-.section-header {
+.gallery-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #ebeef5;
-}
-.section-img {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  margin-top: 16px;
-  padding-bottom: 12px;
-}
-.section-hotel {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  margin-top: 16px;
-  padding-bottom: 12px;
-}
-.section-contant {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
+  margin-bottom: 12px;
 }
 
-.section-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+.gallery-title {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
 }
 
-.section-actions {
-  display: flex;
-  gap: 8px;
+.add-photo-btn {
+  color: #1890ff;
+  font-size: 12px;
 }
 
-/* 信息网格布局 */
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px 24px;
-}
-
-.info-row {
-  display: flex;
-  align-items: baseline;
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.info-label {
-  width: 100px;
-  color: #909399;
-  flex-shrink: 0;
-}
-
-.info-value {
-  color: #303133;
-  font-weight: 400;
-  flex: 1;
-}
-
-/* 指示牌信息列表 */
-.info-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.info-item {
-  font-size: 15px;
-  color: #303133;
-  padding: 4px 0;
-}
-
-/* 酒店联系信息 */
-.contact-info {
-  display: flex;
-  /* justify-content: space-between; */
-  /* align-items: flex-start; */
-}
-
-.contact-person {
+.gallery-images {
   display: flex;
   gap: 12px;
-  align-items: center;
-}
-
-.person-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  overflow: hidden;
-  background-color: #409eff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.person-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.person-details {
-  display: flex;
-  flex-direction: column;
-}
-
-.person-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.person-hotel {
-  font-size: 14px;
-  color: #909399;
-  margin-top: 4px;
-}
-
-.contact-row {
-  display: flex;
-  /* align-items: baseline; */
-  margin-bottom: 8px;
-  left: 38.38px;
-  top: 0px;
-  width: 108px;
-  height: 26px;
-  opacity: 1;
-}
-
-.contact-label {
-  font-size: 15px;
-  font-weight: 500;
-  color: #303133;
-}
-
-.contact-email,
-.contact-phone {
-  margin-left: 10px;
-  font-size: 17.06px;
-  font-weight: 500;
-  color: rgba(113, 128, 150, 1);
-  text-align: left;
-  vertical-align: middle;
-}
-
-/* 地址信息 */
-.address-info {
-  padding: 4px 0;
-}
-
-.address-text {
-  font-size: 15px;
-  color: #303133;
-  line-height: 1.6;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .info-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .contact-info {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .contact-row {
-    justify-content: flex-start;
-  }
-}
-
-/* 入住嘉宾样式 */
-.guests-container {
-  margin-top: 20px;
-}
-
-.guests-header {
-  margin-bottom: 24px;
-}
-
-.guests-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0;
-}
-
-.guests-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-.guest-card {
-  background: #ffffff;
-  border: 1px solid #ebeef5;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-}
-
-.guest-card:hover {
-  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #f0f2f5;
-}
-
-.guest-type {
-  display: flex;
-  align-items: center;
-}
-
-.type-tag {
-  display: inline-block;
-  padding: 4px 12px;
-  background-color: rgba(64, 158, 255, 0.1);
-  color: #409eff;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 20px;
-}
-
-.type-tag.type-important {
-  background-color: rgba(245, 108, 108, 0.1);
-  color: #f56c6c;
-}
-
-.card-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.guest-info {
-  display: flex;
-  gap: 16px;
-  padding: 20px 16px;
-  background-color: #f9fafc;
-}
-
-.guest-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  overflow: hidden;
-  background-color: #409eff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.guest-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.guest-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.guest-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.guest-room {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   flex-wrap: wrap;
 }
 
-.room-tag {
-  font-size: 14px;
-  color: #606266;
-  background-color: #f0f2f5;
-  padding: 2px 8px;
-  border-radius: 4px;
+.gallery-item {
+  position: relative;
+  width: 100px;
+  height: 80px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid #e8e8e8;
 }
 
-.status-badge {
-  display: inline-block;
-  padding: 2px 8px;
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-item .image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.gallery-item:hover .image-overlay {
+  opacity: 1;
+}
+
+.image-overlay .el-icon {
+  color: white;
+  font-size: 24px;
+}
+
+.gallery-add-more {
+  width: 100px;
+  height: 80px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fff;
+}
+
+.gallery-add-more:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.gallery-add-more .el-icon {
+  font-size: 20px;
+  color: #999;
+}
+
+.gallery-add-more span {
+  font-size: 10px;
+  color: #999;
+}
+
+.gallery-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.gallery-empty:hover {
+  background: #e8e8e8;
+}
+
+.gallery-empty .el-icon {
+  font-size: 32px;
+  color: #999;
+}
+
+.gallery-empty span {
   font-size: 12px;
-  font-weight: 500;
-  border-radius: 4px;
+  color: #999;
 }
 
-.status-checked {
-  background-color: rgba(103, 194, 58, 0.1);
-  color: #67c23a;
-  border: 1px solid #67c23a;
+/* 费用信息行 */
+.hall-price-row {
+  display: flex;
+  gap: 32px;
+  padding-top: 16px;
+  margin-top: 8px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+  margin: 0 -20px -20px -20px;
+  padding: 16px 20px;
+  border-radius: 0 0 12px 12px;
 }
 
-.guest-basic-info {
-  padding: 16px;
+.price-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
 }
 
-.basic-header {
+.price-label {
+  font-size: 13px;
+  color: #666;
+}
+
+.price-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fa8c16;
+}
+
+/* 菜单卡片样式 */
+.menu-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.menu-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e8edf2;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.menu-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.menu-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed #ebeef5;
+  padding: 16px 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #e8edf2;
 }
 
-.basic-title {
+.menu-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-card-title .title-icon {
+  font-size: 22px;
+}
+
+.menu-card-title h3 {
+  margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: #1a1a1a;
 }
 
-.info-item {
+.menu-card-title .menu-count {
+  font-size: 13px;
+  color: #8c8f9e;
+  background: #f0f2f5;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.menu-card-body {
+  padding: 0;
+}
+
+.menu-table {
+  width: 100%;
+}
+
+.menu-table :deep(.el-table__header th) {
+  background-color: #f8f9fa;
+  color: #5a5e6e;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.menu-table :deep(.el-table__body td) {
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.edit-btn {
+  color: #1890ff;
+  padding: 4px 6px;
+}
+
+.delete-btn {
+  color: #ff4d4f;
+  padding: 4px 6px;
+}
+
+/* 设计事项样式 */
+.design-content {
+  width: 100%;
+}
+
+.design-header {
   display: flex;
-  margin-bottom: 8px;
-  font-size: 14px;
-  line-height: 1.6;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-.info-item .info-label {
-  /* width: 50px; */
-  color: #909399;
-  flex-shrink: 0;
-}
-
-.info-item .info-value {
-  flex: 1;
-  color: #606266;
-  word-break: break-word;
-}
-
-/* 响应式调整 */
-@media (max-width: 1200px) {
-  .guests-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .guests-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .guest-info {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .guest-room {
-    justify-content: center;
-  }
-
-  .info-item {
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .info-item .info-label {
-    width: auto;
-  }
-}
-
-/* 嘉宾接送样式 */
-.transport-container {
-  margin-top: 20px;
+.header-left {
   display: flex;
+  align-items: center;
   gap: 24px;
 }
 
-/* 左侧样式 */
-.transport-left {
-  width: 380px;
-  background: #ffffff;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  padding: 20px;
+.header-left h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
-.transport-header {
+.total-cost-badge {
+  font-size: 14px;
+  color: #666;
+  background: #f5f7fa;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.total-cost-badge .total-amount {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fa8c16;
+  margin-left: 4px;
+}
+
+.header-right {
+  display: flex;
+  gap: 12px;
+}
+
+.import-excel-btn {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.delete-import-btn {
+  border-color: #ff4d4f;
+  color: #ff4d4f;
+}
+
+.design-table-wrapper {
+  overflow-x: auto;
+}
+
+.design-table {
+  width: 100%;
+}
+
+.design-table :deep(.el-table__header th) {
+  background-color: #f8f9fa;
+  color: #5a5e6e;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.design-table :deep(.el-table__body td) {
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contact-phone {
+  font-size: 12px;
+  color: #8c8f9e;
+}
+
+/* 照片管理弹窗样式 */
+.image-manager {
+  padding: 8px;
+}
+
+.upload-section {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.upload-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
   margin-bottom: 16px;
 }
 
-.transport-header h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0;
-}
-
-.transport-subheader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 20px 0 16px 0;
-}
-
-.transport-subheader h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0;
-}
-
-/* 左侧嘉宾列表 */
-.guest-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.guest-card {
-  border: 1px solid #ebeef5;
-  border-radius: 6px;
-  padding: 12px;
-  background-color: #ffffff;
-}
-
-.guest-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.guest-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.guest-name {
-  font-size: 16px;
-  font-weight: 500;
-  color: #303133;
-}
-
-.guest-tag {
-  display: inline-block;
-  padding: 2px 8px;
+.upload-tip {
   font-size: 12px;
-  border-radius: 4px;
+  color: #999;
+  margin-top: 12px;
 }
 
-.speaker-tag {
-  background-color: rgba(64, 158, 255, 0.1);
-  color: #409eff;
+.uploaded-section {
+  margin-top: 8px;
 }
 
-.important-tag {
-  background-color: rgba(245, 108, 108, 0.1);
-  color: #f56c6c;
-}
-
-.guest-status {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.status-arrived {
-  background-color: rgba(103, 194, 58, 0.1);
-  color: #67c23a;
-}
-
-.status-not-arrived {
-  background-color: rgba(230, 162, 60, 0.1);
-  color: #e6a23c;
-}
-
-.guest-contact {
-  font-size: 14px;
-  color: #909399;
-}
-
-/* 左侧行程安排 */
-.schedule-info {
+.image-grid {
   display: flex;
-  flex-direction: column;
-  /* gap: 8px; */
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-.info-item {
-  display: flex;
-  align-items: baseline;
-  font-size: 14px;
-  line-height: 1.6;
-}
-.info-label {
-  /* width: 80px; */
-  color: #909399;
-  flex-shrink: 0;
-}
-
-.info-value {
-  flex: 1;
-  color: #303133;
-}
-
-/* 右侧样式 */
-.transport-right {
-  flex: 1;
-  background: #ffffff;
-  border: 1px solid #ebeef5;
+.image-item {
+  position: relative;
+  width: 140px;
+  height: 100px;
   border-radius: 8px;
-  padding: 20px;
+  overflow: hidden;
+  border: 1px solid #e8e8e8;
 }
 
-/* 右侧嘉宾网格 */
-.right-guest-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin: 16px 0 20px 0;
+.image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.right-guest-card {
-  border: 1px solid #ebeef5;
-  border-radius: 6px;
-  padding: 12px;
-  background-color: #f9fafc;
-}
-
-.right-guest-header {
+.image-item-actions {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  justify-content: center;
+  gap: 16px;
+  padding: 6px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-.right-guest-card .guest-name {
-  font-size: 15px;
+.image-item:hover .image-item-actions {
+  opacity: 1;
 }
 
-.right-guest-card .guest-contact {
-  font-size: 13px;
-  margin-bottom: 6px;
+.preview-btn {
+  color: white;
+  padding: 2px;
 }
 
-.right-guest-card .guest-status {
-  display: inline-block;
+.delete-btn {
+  color: #ff4d4f;
+  padding: 2px;
 }
 
-/* 基本信息区域 */
-.basic-info-section {
-  margin-top: 16px;
-  border-top: 1px solid #ebeef5;
-  padding-top: 16px;
-}
-
-.basic-header {
-  margin-bottom: 12px;
-}
-
-.basic-header h4 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0;
-}
-
-.basic-content {
+.empty-state {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px;
+  background: #fafafa;
+  border-radius: 8px;
+  color: #999;
 }
 
-.basic-row {
+.empty-state .el-icon {
+  font-size: 48px;
+}
+
+/* 预览弹窗样式 */
+.preview-container {
   display: flex;
-  align-items: baseline;
-  font-size: 14px;
-  line-height: 1.6;
+  justify-content: center;
+  align-items: center;
 }
 
-.basic-label {
-  width: 60px;
-  color: #909399;
-  flex-shrink: 0;
+.preview-container img {
+  max-width: 100%;
+  max-height: 600px;
+  border-radius: 8px;
 }
 
-.basic-value {
-  flex: 1;
-  color: #303133;
+.service-content,
+.guest-stay-content,
+.transport-content {
+  width: 100%;
 }
-
-/* 响应式调整 */
-@media (max-width: 992px) {
-  .transport-container {
-    flex-direction: column;
-  }
-
-  .transport-left {
-    width: 100%;
-  }
+.service-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
-
-@media (max-width: 768px) {
-  .right-guest-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .guest-card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .info-item {
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .info-label {
-    width: auto;
-  }
-
-  .basic-row {
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .basic-label {
-    width: auto;
-  }
+.text-danger {
+  color: #ff4d4f;
+}
+.el-form-item--label-right .el-form-item__label {
+  display: flex;
+  justify-content: flex-start;
+  text-align: left;
+}
+.el-form-item__label {
+  padding: 0 2px 0 0px !important;
 }
 </style>

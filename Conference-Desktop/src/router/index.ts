@@ -27,10 +27,10 @@ const router = createRouter({
       component: () => import('@/views/dashboard/Dashboard.vue'),
       meta: { requiresAuth: true },
       children: [
-        {
-          path: '',
-          redirect: '/dashboard/home',
-        },
+        // {
+        //   path: '',
+        //   redirect: '/dashboard/home',
+        // },
         {
           path: 'home',
           name: 'dashboard-home',
