@@ -416,118 +416,297 @@
         </div>
       </div>
 
-      <!-- 服务方-搭建内容 -->
-      <div v-if="activeTab === 'build'" class="service-content">
-        <div class="service-header">
-          <h3>服务方-搭建</h3>
-          <el-button type="primary" @click="handleAddBuildItem">
-            <el-icon><Plus /></el-icon> 添加搭建项目
-          </el-button>
-        </div>
-        <el-table :data="buildList" stripe border>
-          <el-table-column prop="project" label="项目名称" width="200" />
-          <el-table-column prop="spec" label="规格/说明" />
-          <el-table-column prop="price" label="单价(元)" width="120">
-            <template #default="{ row }">￥{{ formatNumber(row.price) }}</template>
-          </el-table-column>
-          <el-table-column prop="status" label="状态" width="100">
-            <template #default="{ row }">
-              <el-tag :type="row.status === '已完成' ? 'success' : 'warning'">{{
-                row.status
-              }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="100" align="center">
-            <template #default="{ $index }">
-              <el-button link type="danger" size="small" @click="buildList.splice($index, 1)">
-                <el-icon><Delete /></el-icon>
+      <!-- 服务方-搭建内容 - 根据图片重新设计 -->
+      <div v-if="activeTab === 'build'" class="build-content">
+        <div class="build-header">
+          <div class="header-left">
+            <h3>搭建事项</h3>
+            <div class="supplier-info">
+              <span class="supplier-label">供应商：</span>
+              <span class="supplier-name">{{ buildSupplierName || '博文搭建有限公司' }}</span>
+              <el-button link class="change-supplier-btn" @click="openSupplierDialog">
+                <el-icon><Edit /></el-icon> 更换
               </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+            </div>
+            <div class="total-cost-badge">
+              费用合计：<span class="total-amount">￥{{ formatNumber(buildTotalCost) }}</span>
+            </div>
+          </div>
+          <div class="header-right">
+            <el-button class="import-excel-btn" @click="handleImportBuildExcel">
+              <el-icon><Upload /></el-icon> 导入Excel
+            </el-button>
+            <el-button type="primary" @click="openAddBuildDialog">
+              <el-icon><Plus /></el-icon> 添加事项
+            </el-button>
+            <el-button class="delete-import-btn" @click="handleDeleteBuildImport">
+              <el-icon><Delete /></el-icon> 删除导入
+            </el-button>
+          </div>
+        </div>
+
+        <div class="build-table-wrapper">
+          <el-table :data="buildList" stripe border class="build-table" style="width: 100%">
+            <el-table-column type="index" label="#" width="55" align="center" />
+            <el-table-column prop="itemName" label="事项名称" min-width="130" />
+            <el-table-column
+              prop="description"
+              label="事项描述"
+              min-width="160"
+              show-overflow-tooltip
+            />
+            <el-table-column prop="unit" label="单位" width="80" align="center" />
+            <el-table-column prop="unitPrice" label="单价" width="100" align="right">
+              <template #default="{ row }">￥{{ formatNumber(row.unitPrice) }}</template>
+            </el-table-column>
+            <el-table-column prop="quantity" label="数量" width="80" align="center" />
+            <el-table-column prop="totalPrice" label="总价" width="100" align="right">
+              <template #default="{ row }">￥{{ formatNumber(row.totalPrice) }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getBuildStatusType(row.status)" size="small">{{
+                  row.status
+                }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="联系人" min-width="140">
+              <template #default="{ row }">
+                <div class="contact-info">
+                  <div>{{ row.contactPerson }}</div>
+                  <div class="contact-phone">{{ row.contactPhone }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
+            <el-table-column label="操作" width="100" align="center" fixed="right">
+              <template #default="{ row, $index }">
+                <el-button link class="edit-btn" @click="openEditBuildDialog(row, $index)">
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+                <el-button link class="delete-btn" @click="deleteBuildItem($index)">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
 
-      <!-- 服务方-摄影内容 -->
-      <div v-if="activeTab === 'photo'" class="service-content">
-        <div class="service-header">
-          <h3>服务方-摄影</h3>
-          <el-button type="primary" @click="handleAddPhotoItem">
-            <el-icon><Plus /></el-icon> 添加摄影服务
-          </el-button>
-        </div>
-        <el-table :data="photoList" stripe border>
-          <el-table-column prop="project" label="服务项目" width="200" />
-          <el-table-column prop="spec" label="规格/说明" />
-          <el-table-column prop="price" label="单价(元)" width="120">
-            <template #default="{ row }">￥{{ formatNumber(row.price) }}</template>
-          </el-table-column>
-          <el-table-column prop="status" label="状态" width="100">
-            <template #default="{ row }">
-              <el-tag :type="row.status === '已确认' ? 'success' : 'info'">{{ row.status }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="100" align="center">
-            <template #default="{ $index }">
-              <el-button link type="danger" size="small" @click="photoList.splice($index, 1)">
-                <el-icon><Delete /></el-icon>
+      <!-- 服务方-摄影内容 - 根据图片重新设计 -->
+      <div v-if="activeTab === 'photo'" class="photo-content">
+        <div class="photo-header">
+          <div class="header-left">
+            <h3>摄影事项</h3>
+            <div class="supplier-info">
+              <span class="supplier-label">供应商：</span>
+              <span class="supplier-name">{{ photoSupplierName || '上海光影记录有限公司' }}</span>
+              <el-button link class="change-supplier-btn" @click="openPhotoSupplierDialog">
+                <el-icon><Edit /></el-icon> 更换
               </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+            </div>
+            <div class="total-cost-badge">
+              费用合计：<span class="total-amount">￥{{ formatNumber(photoTotalCost) }}</span>
+            </div>
+          </div>
+          <div class="header-right">
+            <el-button class="import-excel-btn" @click="handleImportPhotoExcel">
+              <el-icon><Upload /></el-icon> 导入Excel
+            </el-button>
+            <el-button type="primary" @click="openAddPhotoDialog">
+              <el-icon><Plus /></el-icon> 添加事项
+            </el-button>
+            <el-button class="delete-import-btn" @click="handleDeletePhotoImport">
+              <el-icon><Delete /></el-icon> 删除导入
+            </el-button>
+          </div>
+        </div>
+
+        <div class="photo-table-wrapper">
+          <el-table :data="photoList" stripe border class="photo-table" style="width: 100%">
+            <el-table-column type="index" label="#" width="55" align="center" />
+            <el-table-column prop="itemName" label="事项名称" min-width="140" />
+            <el-table-column
+              prop="description"
+              label="事项描述"
+              min-width="200"
+              show-overflow-tooltip
+            />
+            <el-table-column prop="price" label="价格(元)" width="110" align="right">
+              <template #default="{ row }">￥{{ formatNumber(row.price) }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getPhotoStatusType(row.status)" size="small">{{
+                  row.status
+                }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="联系人" min-width="140">
+              <template #default="{ row }">
+                <div class="contact-info">
+                  <div>{{ row.contactPerson }}</div>
+                  <div class="contact-phone">{{ row.contactPhone }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
+            <el-table-column label="操作" width="100" align="center" fixed="right">
+              <template #default="{ row, $index }">
+                <el-button link class="edit-btn" @click="openEditPhotoDialog(row, $index)">
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+                <el-button link class="delete-btn" @click="deletePhotoItem($index)">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
 
-      <!-- 嘉宾入住内容 -->
+      <!-- 嘉宾入住内容 - 根据图片重新设计 -->
       <div v-if="activeTab === 'guestStay'" class="guest-stay-content">
-        <div class="service-header">
-          <h3>嘉宾入住信息</h3>
-          <el-button type="primary" @click="handleAddGuest">
-            <el-icon><Plus /></el-icon> 添加嘉宾
-          </el-button>
-        </div>
-        <el-table :data="guestList" stripe border>
-          <el-table-column prop="name" label="嘉宾姓名" width="120" />
-          <el-table-column prop="roomType" label="房型" width="120" />
-          <el-table-column prop="roomNumber" label="房间号" width="100" />
-          <el-table-column prop="checkIn" label="入住日期" width="120" />
-          <el-table-column prop="checkOut" label="离店日期" width="120" />
-          <el-table-column prop="status" label="状态" width="100">
-            <template #default="{ row }">
-              <el-tag :type="row.status === '已入住' ? 'success' : 'info'">{{ row.status }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="100" align="center">
-            <template #default="{ $index }">
-              <el-button link type="danger" size="small" @click="guestList.splice($index, 1)">
-                <el-icon><Delete /></el-icon>
+        <div class="guest-stay-header">
+          <div class="header-left">
+            <h3>嘉宾入住</h3>
+            <div class="supplier-info">
+              <span class="supplier-label">供应商：</span>
+              <span class="supplier-name">{{ guestStaySupplierName || '上海汤臣洲际大酒店' }}</span>
+              <el-button link class="change-supplier-btn" @click="openGuestStaySupplierDialog">
+                <el-icon><Edit /></el-icon> 更换
               </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+            </div>
+            <div class="total-cost-badge">
+              费用合计：<span class="total-amount">￥{{ formatNumber(guestStayTotalCost) }}</span>
+            </div>
+          </div>
+          <div class="header-right">
+            <el-button class="import-excel-btn" @click="handleImportGuestStayExcel">
+              <el-icon><Upload /></el-icon> 导入Excel
+            </el-button>
+            <el-button type="primary" @click="openAddGuestStayDialog">
+              <el-icon><Plus /></el-icon> 添加事项
+            </el-button>
+            <el-button class="delete-import-btn" @click="handleDeleteGuestStayImport">
+              <el-icon><Delete /></el-icon> 删除导入
+            </el-button>
+          </div>
+        </div>
+
+        <div class="guest-stay-table-wrapper">
+          <el-table
+            :data="guestStayList"
+            stripe
+            border
+            class="guest-stay-table"
+            style="width: 100%"
+          >
+            <el-table-column type="index" label="#" width="55" align="center" />
+            <el-table-column prop="guestName" label="嘉宾姓名" min-width="110" />
+            <el-table-column prop="roomType" label="房型" min-width="110" />
+            <el-table-column prop="roomNumber" label="房号" width="90" align="center" />
+            <el-table-column prop="checkInDate" label="入住日期" width="110" />
+            <el-table-column prop="checkOutDate" label="退房日期" width="110" />
+            <el-table-column prop="days" label="天数" width="70" align="center" />
+            <el-table-column prop="roomPrice" label="房费单价" width="110" align="right">
+              <template #default="{ row }">￥{{ formatNumber(row.roomPrice) }}</template>
+            </el-table-column>
+            <el-table-column prop="totalPrice" label="房费合计" width="110" align="right">
+              <template #default="{ row }">￥{{ formatNumber(row.totalPrice) }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="90" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getGuestStayStatusType(row.status)" size="small">{{
+                  row.status
+                }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="联系方式" min-width="130">
+              <template #default="{ row }">
+                <div class="contact-info">
+                  <div>{{ row.contactPhone }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
+            <el-table-column label="操作" width="100" align="center" fixed="right">
+              <template #default="{ row, $index }">
+                <el-button link class="edit-btn" @click="openEditGuestStayDialog(row, $index)">
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+                <el-button link class="delete-btn" @click="deleteGuestStayItem($index)">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
 
-      <!-- 接送安排内容 -->
+      <!-- 接送安排内容 - 根据图片重新设计 -->
       <div v-if="activeTab === 'transport'" class="transport-content">
-        <div class="service-header">
-          <h3>接送安排</h3>
-          <el-button type="primary" @click="handleAddTransport">
-            <el-icon><Plus /></el-icon> 添加接送安排
-          </el-button>
-        </div>
-        <el-table :data="transportList" stripe border>
-          <el-table-column prop="guest" label="嘉宾" width="120" />
-          <el-table-column prop="type" label="接送类型" width="100" />
-          <el-table-column prop="date" label="日期" width="120" />
-          <el-table-column prop="time" label="时间" width="100" />
-          <el-table-column prop="route" label="路线" />
-          <el-table-column prop="vehicle" label="车辆" width="120" />
-          <el-table-column label="操作" width="100" align="center">
-            <template #default="{ $index }">
-              <el-button link type="danger" size="small" @click="transportList.splice($index, 1)">
-                <el-icon><Delete /></el-icon>
+        <div class="transport-header">
+          <div class="header-left">
+            <h3>接送安排</h3>
+            <div class="supplier-info">
+              <span class="supplier-label">供应商：</span>
+              <span class="supplier-name">{{ transportSupplierName || '上海汤臣洲际大酒店' }}</span>
+              <el-button link class="change-supplier-btn" @click="openTransportSupplierDialog">
+                <el-icon><Edit /></el-icon> 更换
               </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+            </div>
+            <div class="total-cost-badge">
+              费用合计：<span class="total-amount">￥{{ formatNumber(transportTotalCost) }}</span>
+            </div>
+          </div>
+          <div class="header-right">
+            <el-button class="import-excel-btn" @click="handleImportTransportExcel">
+              <el-icon><Upload /></el-icon> 导入Excel
+            </el-button>
+            <el-button type="primary" @click="openAddTransportDialog">
+              <el-icon><Plus /></el-icon> 添加事项
+            </el-button>
+            <el-button class="delete-import-btn" @click="handleDeleteTransportImport">
+              <el-icon><Delete /></el-icon> 删除导入
+            </el-button>
+          </div>
+        </div>
+
+        <div class="transport-table-wrapper">
+          <el-table :data="transportList" stripe border class="transport-table" style="width: 100%">
+            <el-table-column type="index" label="#" width="55" align="center" />
+            <el-table-column prop="guestName" label="嘉宾姓名" min-width="110" />
+            <el-table-column prop="type" label="类型" width="90" align="center" />
+            <el-table-column prop="scheduleTime" label="接送时间" width="160" />
+            <el-table-column prop="departure" label="出发地" min-width="140" />
+            <el-table-column prop="destination" label="目的地" min-width="140" />
+            <el-table-column prop="vehicle" label="车辆" min-width="120" />
+            <el-table-column prop="driver" label="司机" min-width="100" />
+            <el-table-column prop="driverPhone" label="司机电话" width="120" />
+            <el-table-column prop="price" label="费用" width="100" align="right">
+              <template #default="{ row }">￥{{ formatNumber(row.price) }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getTransportStatusType(row.status)" size="small">{{
+                  row.status
+                }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
+            <el-table-column label="操作" width="100" align="center" fixed="right">
+              <template #default="{ row, $index }">
+                <el-button link class="edit-btn" @click="openEditTransportDialog(row, $index)">
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+                <el-button link class="delete-btn" @click="deleteTransportItem($index)">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
     </div>
 
@@ -824,6 +1003,429 @@
       </template>
     </el-dialog>
 
+    <!-- 搭建事项编辑弹窗-->
+    <el-dialog
+      v-model="buildDialogVisible"
+      :title="buildDialogTitle"
+      width="800px"
+      @close="resetBuildForm"
+    >
+      <el-form :model="buildForm" :rules="buildFormRules" ref="buildFormRef" label-width="100px">
+        <el-form-item label="事项名称" prop="itemName">
+          <el-input v-model="buildForm.itemName" placeholder="项目名称" />
+        </el-form-item>
+        <el-form-item label="事项描述" prop="description">
+          <el-input
+            v-model="buildForm.description"
+            type="textarea"
+            :rows="2"
+            placeholder="项目描述"
+          />
+        </el-form-item>
+        <el-form-item label="搭建商" prop="builderName">
+          <el-input v-model="buildForm.builderName" placeholder="搭建商" />
+        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="搭建联系人" prop="contactPerson">
+              <el-input v-model="buildForm.contactPerson" placeholder="搭建联系人" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="联系人电话" prop="contactPhone">
+              <el-input v-model="buildForm.contactPhone" placeholder="联系人电话" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="计量单位" prop="unit">
+              <el-input v-model="buildForm.unit" placeholder="单位" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="数量" prop="quantity">
+              <el-input-number
+                v-model="buildForm.quantity"
+                :min="0.01"
+                :step="1"
+                :precision="0"
+                style="width: 100%"
+                @change="calculateBuildTotalPrice"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="单价" prop="unitPrice">
+              <el-input-number
+                v-model="buildForm.unitPrice"
+                :min="0"
+                :step="1"
+                :precision="2"
+                style="width: 100%"
+                @change="calculateBuildTotalPrice"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="总价" prop="totalPrice">
+          <el-input-number
+            v-model="buildForm.totalPrice"
+            :min="0"
+            :step="1"
+            :precision="2"
+            style="width: 100%"
+            disabled
+          />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="buildForm.status" placeholder="请选择状态" style="width: 100%">
+            <el-option label="待搭建" value="待搭建" />
+            <el-option label="进行中" value="进行中" />
+            <el-option label="已确认" value="已确认" />
+            <el-option label="已搭建" value="已搭建" />
+            <el-option label="已完成" value="已完成" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="buildForm.remark" type="textarea" :rows="2" placeholder="备注" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="buildDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveBuildItem">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 摄影事项编辑弹窗（根据图二设计） -->
+    <el-dialog
+      v-model="photoDialogVisible"
+      :title="photoDialogTitle"
+      width="600px"
+      @close="resetPhotoForm"
+    >
+      <el-form :model="photoForm" :rules="photoFormRules" ref="photoFormRef" label-width="100px">
+        <el-form-item label="事项名称" prop="itemName">
+          <el-input v-model="photoForm.itemName" placeholder="事项名称" />
+        </el-form-item>
+        <el-form-item label="事项描述" prop="description">
+          <el-input
+            v-model="photoForm.description"
+            type="textarea"
+            :rows="2"
+            placeholder="事项描述"
+          />
+        </el-form-item>
+        <el-form-item label="供应商" prop="supplierName">
+          <el-input v-model="photoForm.supplierName" placeholder="供应商" />
+        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="联系人" prop="contactPerson">
+              <el-input v-model="photoForm.contactPerson" placeholder="联系人" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="联系人电话" prop="contactPhone">
+              <el-input v-model="photoForm.contactPhone" placeholder="联系人电话" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="价格(元)" prop="price">
+          <el-input-number
+            v-model="photoForm.price"
+            :min="0"
+            :step="1"
+            :precision="2"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="photoForm.status" placeholder="请选择状态" style="width: 100%">
+            <el-option label="商讨中" value="商讨中" />
+            <el-option label="已确认" value="已确认" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="photoForm.remark" type="textarea" :rows="2" placeholder="备注" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="photoDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="savePhotoItem">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 嘉宾入住编辑弹窗（根据图二设计） -->
+    <el-dialog
+      v-model="guestStayDialogVisible"
+      :title="guestStayDialogTitle"
+      width="700px"
+      @close="resetGuestStayForm"
+    >
+      <el-form
+        :model="guestStayForm"
+        :rules="guestStayFormRules"
+        ref="guestStayFormRef"
+        label-width="100px"
+      >
+        <el-form-item label="嘉宾姓名" prop="guestName">
+          <el-input v-model="guestStayForm.guestName" placeholder="嘉宾姓名" />
+        </el-form-item>
+        <el-form-item label="房型" prop="roomType">
+          <el-input v-model="guestStayForm.roomType" placeholder="房型" />
+        </el-form-item>
+        <el-form-item label="房号" prop="roomNumber">
+          <el-input v-model="guestStayForm.roomNumber" placeholder="房号" />
+        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="入住日期" prop="checkInDate">
+              <el-date-picker
+                v-model="guestStayForm.checkInDate"
+                type="date"
+                placeholder="请选择日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+                @change="calculateGuestStayDaysAndTotal"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="退房日期" prop="checkOutDate">
+              <el-date-picker
+                v-model="guestStayForm.checkOutDate"
+                type="date"
+                placeholder="请选择日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+                @change="calculateGuestStayDaysAndTotal"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="入住天数" prop="days">
+              <el-input-number
+                v-model="guestStayForm.days"
+                :min="1"
+                :step="1"
+                :precision="0"
+                style="width: 100%"
+                @change="calculateGuestStayTotalPrice"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="房费单价" prop="roomPrice">
+              <el-input-number
+                v-model="guestStayForm.roomPrice"
+                :min="0"
+                :step="1"
+                :precision="2"
+                style="width: 100%"
+                @change="calculateGuestStayTotalPrice"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="房费合计" prop="totalPrice">
+          <el-input-number
+            v-model="guestStayForm.totalPrice"
+            :min="0"
+            :step="1"
+            :precision="2"
+            style="width: 100%"
+            disabled
+          />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="guestStayForm.status" placeholder="请选择状态" style="width: 100%">
+            <el-option label="待入住" value="待入住" />
+            <el-option label="已入住" value="已入住" />
+            <el-option label="已退房" value="已退房" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="联系方式" prop="contactPhone">
+          <el-input v-model="guestStayForm.contactPhone" placeholder="联系方式" />
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="guestStayForm.remark" type="textarea" :rows="2" placeholder="备注" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="guestStayDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveGuestStayItem">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 接送安排编辑弹窗（根据图二设计） -->
+    <el-dialog
+      v-model="transportDialogVisible"
+      :title="transportDialogTitle"
+      width="700px"
+      @close="resetTransportForm"
+    >
+      <el-form
+        :model="transportForm"
+        :rules="transportFormRules"
+        ref="transportFormRef"
+        label-width="100px"
+      >
+        <el-form-item label="嘉宾姓名" prop="guestName">
+          <el-input v-model="transportForm.guestName" placeholder="嘉宾姓名" />
+        </el-form-item>
+        <el-form-item label="类型" prop="type">
+          <el-select v-model="transportForm.type" placeholder="请选择类型" style="width: 100%">
+            <el-option label="接机" value="接机" />
+            <el-option label="送机" value="送机" />
+            <el-option label="接站" value="接站" />
+            <el-option label="送站" value="送站" />
+            <el-option label="其他" value="其他" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="时间" prop="scheduleTime">
+          <el-date-picker
+            v-model="transportForm.scheduleTime"
+            type="datetime"
+            placeholder="请选择时间"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DD HH:mm"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="出发地" prop="departure">
+              <el-input v-model="transportForm.departure" placeholder="出发地" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="目的地" prop="destination">
+              <el-input v-model="transportForm.destination" placeholder="目的地" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="车辆" prop="vehicle">
+              <el-input v-model="transportForm.vehicle" placeholder="车辆" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="司机" prop="driver">
+              <el-input v-model="transportForm.driver" placeholder="司机" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="司机电话" prop="driverPhone">
+          <el-input v-model="transportForm.driverPhone" placeholder="司机电话" />
+        </el-form-item>
+        <el-form-item label="费用" prop="price">
+          <el-input-number
+            v-model="transportForm.price"
+            :min="0"
+            :step="1"
+            :precision="2"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="transportForm.status" placeholder="请选择状态" style="width: 100%">
+            <el-option label="待安排" value="待安排" />
+            <el-option label="已安排" value="已安排" />
+            <el-option label="已完成" value="已完成" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="transportForm.remark" type="textarea" :rows="2" placeholder="备注" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="transportDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveTransportItem">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 更换供应商弹窗（摄影） -->
+    <el-dialog v-model="photoSupplierDialogVisible" title="更换供应商" width="400px">
+      <el-form :model="photoSupplierForm" label-width="110px">
+        <el-form-item label="供应商名称">
+          <el-input v-model="photoSupplierForm.name" placeholder="请输入供应商名称" />
+        </el-form-item>
+        <el-form-item label="联系人">
+          <el-input v-model="photoSupplierForm.contactPerson" placeholder="请输入联系人" />
+        </el-form-item>
+        <el-form-item label="联系电话">
+          <el-input v-model="photoSupplierForm.contactPhone" placeholder="请输入联系电话" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="photoSupplierDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="savePhotoSupplier">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 更换供应商弹窗（搭建） -->
+    <el-dialog v-model="supplierDialogVisible" title="更换供应商" width="400px">
+      <el-form :model="supplierForm" label-width="80px">
+        <el-form-item label="供应商名称">
+          <el-input v-model="supplierForm.name" placeholder="请输入供应商名称" />
+        </el-form-item>
+        <el-form-item label="联系人">
+          <el-input v-model="supplierForm.contactPerson" placeholder="请输入联系人" />
+        </el-form-item>
+        <el-form-item label="联系电话">
+          <el-input v-model="supplierForm.contactPhone" placeholder="请输入联系电话" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="supplierDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveSupplier">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 更换供应商弹窗（嘉宾入住） -->
+    <el-dialog v-model="guestStaySupplierDialogVisible" title="更换供应商" width="400px">
+      <el-form :model="guestStaySupplierForm" label-width="110px">
+        <el-form-item label="供应商名称">
+          <el-input v-model="guestStaySupplierForm.name" placeholder="请输入供应商名称" />
+        </el-form-item>
+        <el-form-item label="联系人">
+          <el-input v-model="guestStaySupplierForm.contactPerson" placeholder="请输入联系人" />
+        </el-form-item>
+        <el-form-item label="联系电话">
+          <el-input v-model="guestStaySupplierForm.contactPhone" placeholder="请输入联系电话" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="guestStaySupplierDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveGuestStaySupplier">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 更换供应商弹窗（接送安排） -->
+    <el-dialog v-model="transportSupplierDialogVisible" title="更换供应商" width="400px">
+      <el-form :model="transportSupplierForm" label-width="110px">
+        <el-form-item label="供应商名称">
+          <el-input v-model="transportSupplierForm.name" placeholder="请输入供应商名称" />
+        </el-form-item>
+        <el-form-item label="联系人">
+          <el-input v-model="transportSupplierForm.contactPerson" placeholder="请输入联系人" />
+        </el-form-item>
+        <el-form-item label="联系电话">
+          <el-input v-model="transportSupplierForm.contactPhone" placeholder="请输入联系电话" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="transportSupplierDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveTransportSupplier">确定</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 照片管理弹窗（支持多张上传） -->
     <el-dialog
       v-model="imageManagerVisible"
@@ -997,28 +1599,6 @@ interface MenuItem {
   price: number
   remark: string
 }
-interface ServiceItem {
-  project: string
-  spec: string
-  price: number
-  status: string
-}
-interface GuestItem {
-  name: string
-  roomType: string
-  roomNumber: string
-  checkIn: string
-  checkOut: string
-  status: string
-}
-interface TransportItem {
-  guest: string
-  type: string
-  date: string
-  time: string
-  route: string
-  vehicle: string
-}
 interface TempImage {
   url: string
   file: File
@@ -1040,6 +1620,67 @@ interface DesignItem {
   }
   status: string
   designPrice: number
+  remark: string
+}
+
+// 搭建事项类型定义
+interface BuildItem {
+  id: number
+  itemName: string
+  description: string
+  unit: string
+  unitPrice: number
+  quantity: number
+  totalPrice: number
+  status: string
+  contactPerson: string
+  contactPhone: string
+  builderName: string
+  remark: string
+}
+
+// 摄影事项类型定义
+interface PhotoItem {
+  id: number
+  itemName: string
+  description: string
+  price: number
+  status: string
+  contactPerson: string
+  contactPhone: string
+  supplierName: string
+  remark: string
+}
+
+// 嘉宾入住事项类型定义
+interface GuestStayItem {
+  id: number
+  guestName: string
+  roomType: string
+  roomNumber: string
+  checkInDate: string
+  checkOutDate: string
+  days: number
+  roomPrice: number
+  totalPrice: number
+  status: string
+  contactPhone: string
+  remark: string
+}
+
+// 接送安排事项类型定义
+interface TransportItem {
+  id: number
+  guestName: string
+  type: string
+  scheduleTime: string
+  departure: string
+  destination: string
+  vehicle: string
+  driver: string
+  driverPhone: string
+  price: number
+  status: string
   remark: string
 }
 
@@ -1325,31 +1966,192 @@ const designList = ref<DesignItem[]>([
   },
 ])
 
-// 服务方数据
-const buildList = ref<ServiceItem[]>([
-  { project: '舞台搭建', spec: '主舞台+LED背景', price: 15000, status: '待搭建' },
-])
-const photoList = ref<ServiceItem[]>([
-  { project: '全程摄影', spec: '3机位+快剪', price: 12000, status: '已确认' },
-])
-const guestList = ref<GuestItem[]>([
+// 搭建事项数据（根据图片）
+const buildList = ref<BuildItem[]>([
   {
-    name: '张三',
-    roomType: '标准大床房',
-    roomNumber: '1808',
-    checkIn: '12-04',
-    checkOut: '12-06',
-    status: '未入住',
+    id: 1,
+    itemName: '主舞台',
+    description: '5*15m',
+    unit: '平方',
+    unitPrice: 50,
+    quantity: 75,
+    totalPrice: 3750,
+    status: '已确认',
+    contactPerson: 'Carrie',
+    contactPhone: '123456789',
+    builderName: '博文搭建有限公司',
+    remark: '12月03日下午13：00进场搭建',
+  },
+  {
+    id: 2,
+    itemName: '拉绒地毯',
+    description: '蓝色或烟灰色待定',
+    unit: '平方',
+    unitPrice: 15,
+    quantity: 80,
+    totalPrice: 1200,
+    status: '进行中',
+    contactPerson: '',
+    contactPhone: '',
+    builderName: '博文搭建有限公司',
+    remark: '',
+  },
+  {
+    id: 3,
+    itemName: '讲台包围板',
+    description: 'kt版包装',
+    unit: '平方',
+    unitPrice: 100,
+    quantity: 1,
+    totalPrice: 100,
+    status: '待搭建',
+    contactPerson: '',
+    contactPhone: '',
+    builderName: '博文搭建有限公司',
+    remark: '',
+  },
+  {
+    id: 4,
+    itemName: '舞台前挡板led电子屏',
+    description: '室内p2',
+    unit: '平方',
+    unitPrice: 230,
+    quantity: 10,
+    totalPrice: 2300,
+    status: '已搭建',
+    contactPerson: '',
+    contactPhone: '',
+    builderName: '博文搭建有限公司',
+    remark: '',
+  },
+  {
+    id: 5,
+    itemName: '线阵音箱',
+    description: '含低音2只，全频线阵4只',
+    unit: '只',
+    unitPrice: 600,
+    quantity: 6,
+    totalPrice: 3600,
+    status: '进行中',
+    contactPerson: '',
+    contactPhone: '',
+    builderName: '博文搭建有限公司',
+    remark: '',
   },
 ])
+
+// 摄影事项数据（根据图片）
+const photoList = ref<PhotoItem[]>([
+  {
+    id: 1,
+    itemName: '全程摄影',
+    description: '2名摄影师全天跟拍',
+    price: 8000,
+    status: '已确认',
+    contactPerson: '王摄影',
+    contactPhone: '123456789',
+    supplierName: '上海光影记录有限公司',
+    remark: '后期精修200张',
+  },
+  {
+    id: 2,
+    itemName: '视频拍摄',
+    description: '全程录像+花絮剪辑',
+    price: 2000,
+    status: '商讨中',
+    contactPerson: '',
+    contactPhone: '',
+    supplierName: '上海光影记录有限公司',
+    remark: '含3分钟精剪花絮',
+  },
+  {
+    id: 3,
+    itemName: '图片直播',
+    description: '现场实时拍摄照片，图片直播链接：www.xxxxxxx.com',
+    price: 0,
+    status: '已确认',
+    contactPerson: '',
+    contactPhone: '',
+    supplierName: '上海光影记录有限公司',
+    remark: '',
+  },
+])
+
+// 嘉宾入住数据（根据图片）
+const guestStayList = ref<GuestStayItem[]>([
+  {
+    id: 1,
+    guestName: '王远航',
+    roomType: '豪华套房',
+    roomNumber: '2801',
+    checkInDate: '2026-04-17',
+    checkOutDate: '2026-04-19',
+    days: 2,
+    roomPrice: 1500,
+    totalPrice: 3000,
+    status: '已入住',
+    contactPhone: '12305807355',
+    remark: '特邀嘉宾，需要接送',
+  },
+  {
+    id: 2,
+    guestName: '李知行',
+    roomType: '标准大床房',
+    roomNumber: '2802',
+    checkInDate: '2026-04-17',
+    checkOutDate: '2026-04-18',
+    days: 1,
+    roomPrice: 1500,
+    totalPrice: 1500,
+    status: '待入住',
+    contactPhone: '12305807355',
+    remark: '',
+  },
+])
+
+// 接送安排数据（根据图片）
 const transportList = ref<TransportItem[]>([
   {
-    guest: '张三',
+    id: 1,
+    guestName: '王远航',
     type: '接机',
-    date: '12-04',
-    time: '10:00',
-    route: '浦东机场→酒店',
+    scheduleTime: '2025-12-03 14:00',
+    departure: '浦东国际机场',
+    destination: '上海北外滩洲际酒店',
     vehicle: '别克GL8',
+    driver: '张师傅',
+    driverPhone: '12305807355',
+    price: 300,
+    status: '已完成',
+    remark: 'CA1234航班',
+  },
+  {
+    id: 2,
+    guestName: '李知行',
+    type: '接站',
+    scheduleTime: '2025-12-03 18:00',
+    departure: '上海虹桥站',
+    destination: '上海北外滩洲际酒店',
+    vehicle: '别克GL8',
+    driver: '王师傅',
+    driverPhone: '12305807355',
+    price: 500,
+    status: '待安排',
+    remark: 'G02次列车',
+  },
+  {
+    id: 3,
+    guestName: '王远航',
+    type: '送机',
+    scheduleTime: '2025-12-05 06:00',
+    departure: '上海北外滩洲际酒店',
+    destination: '浦东国际机场',
+    vehicle: '别克GL8',
+    driver: '王师傅',
+    driverPhone: '12305807355',
+    price: 300,
+    status: '已安排',
+    remark: '',
   },
 ])
 
@@ -1358,6 +2160,32 @@ const totalAmount = computed(() => quoteList.value.reduce((sum, item) => sum + i
 const designTotalCost = computed(() =>
   designList.value.reduce((sum, item) => sum + (item.designPrice || 0), 0),
 )
+const buildTotalCost = computed(() =>
+  buildList.value.reduce((sum, item) => sum + (item.totalPrice || 0), 0),
+)
+const buildSupplierName = computed(() => {
+  if (buildList.value.length > 0 && buildList.value[0].builderName) {
+    return buildList.value[0].builderName
+  }
+  return '博文搭建有限公司'
+})
+const photoTotalCost = computed(() =>
+  photoList.value.reduce((sum, item) => sum + (item.price || 0), 0),
+)
+const photoSupplierName = computed(() => {
+  if (photoList.value.length > 0 && photoList.value[0].supplierName) {
+    return photoList.value[0].supplierName
+  }
+  return '上海光影记录有限公司'
+})
+const guestStayTotalCost = computed(() =>
+  guestStayList.value.reduce((sum, item) => sum + (item.totalPrice || 0), 0),
+)
+const guestStaySupplierName = computed(() => '上海汤臣洲际大酒店')
+const transportTotalCost = computed(() =>
+  transportList.value.reduce((sum, item) => sum + (item.price || 0), 0),
+)
+const transportSupplierName = computed(() => '上海汤臣洲际大酒店')
 const costCategories = computed(() => {
   const categories = ['住宿', '会场', '餐饮', '设备', '服务', '其他']
   return categories.map((name) => ({
@@ -1469,6 +2297,142 @@ const designFormRules = {
   designPrice: [{ required: true, message: '请输入设计制作费', trigger: 'blur' }],
 }
 
+// 搭建事项弹窗
+const buildDialogVisible = ref(false)
+const buildDialogTitle = ref('新增搭建事项')
+const buildFormRef = ref()
+const editingBuildIndex = ref<number | null>(null)
+const buildForm = ref({
+  itemName: '',
+  description: '',
+  unit: '',
+  unitPrice: 0,
+  quantity: 1,
+  totalPrice: 0,
+  status: '',
+  contactPerson: '',
+  contactPhone: '',
+  builderName: '',
+  remark: '',
+})
+const buildFormRules = {
+  itemName: [{ required: true, message: '请输入事项名称', trigger: 'blur' }],
+  unit: [{ required: true, message: '请输入计量单位', trigger: 'blur' }],
+  unitPrice: [{ required: true, message: '请输入单价', trigger: 'blur' }],
+  quantity: [{ required: true, message: '请输入数量', trigger: 'blur' }],
+}
+
+// 摄影事项弹窗
+const photoDialogVisible = ref(false)
+const photoDialogTitle = ref('新增摄影事项')
+const photoFormRef = ref()
+const editingPhotoIndex = ref<number | null>(null)
+const photoForm = ref({
+  itemName: '',
+  description: '',
+  supplierName: '',
+  contactPerson: '',
+  contactPhone: '',
+  price: 0,
+  status: '',
+  remark: '',
+})
+const photoFormRules = {
+  itemName: [{ required: true, message: '请输入事项名称', trigger: 'blur' }],
+  supplierName: [{ required: true, message: '请输入供应商', trigger: 'blur' }],
+  price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
+}
+
+// 嘉宾入住弹窗
+const guestStayDialogVisible = ref(false)
+const guestStayDialogTitle = ref('新增嘉宾入住')
+const guestStayFormRef = ref()
+const editingGuestStayIndex = ref<number | null>(null)
+const guestStayForm = ref({
+  guestName: '',
+  roomType: '',
+  roomNumber: '',
+  checkInDate: '',
+  checkOutDate: '',
+  days: 1,
+  roomPrice: 0,
+  totalPrice: 0,
+  status: '',
+  contactPhone: '',
+  remark: '',
+})
+const guestStayFormRules = {
+  guestName: [{ required: true, message: '请输入嘉宾姓名', trigger: 'blur' }],
+  roomType: [{ required: true, message: '请输入房型', trigger: 'blur' }],
+  checkInDate: [{ required: true, message: '请选择入住日期', trigger: 'change' }],
+  checkOutDate: [{ required: true, message: '请选择退房日期', trigger: 'change' }],
+  roomPrice: [{ required: true, message: '请输入房费单价', trigger: 'blur' }],
+}
+
+// 接送安排弹窗
+const transportDialogVisible = ref(false)
+const transportDialogTitle = ref('新增接送安排')
+const transportFormRef = ref()
+const editingTransportIndex = ref<number | null>(null)
+const transportForm = ref({
+  guestName: '',
+  type: '',
+  scheduleTime: '',
+  departure: '',
+  destination: '',
+  vehicle: '',
+  driver: '',
+  driverPhone: '',
+  price: 0,
+  status: '',
+  remark: '',
+})
+const transportFormRules = {
+  guestName: [{ required: true, message: '请输入嘉宾姓名', trigger: 'blur' }],
+  type: [{ required: true, message: '请选择类型', trigger: 'change' }],
+  scheduleTime: [{ required: true, message: '请选择时间', trigger: 'change' }],
+  departure: [{ required: true, message: '请输入出发地', trigger: 'blur' }],
+  destination: [{ required: true, message: '请输入目的地', trigger: 'blur' }],
+  vehicle: [{ required: true, message: '请输入车辆', trigger: 'blur' }],
+  driver: [{ required: true, message: '请输入司机', trigger: 'blur' }],
+  driverPhone: [{ required: true, message: '请输入司机电话', trigger: 'blur' }],
+  price: [{ required: true, message: '请输入费用', trigger: 'blur' }],
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
+}
+
+// 供应商弹窗（搭建）
+const supplierDialogVisible = ref(false)
+const supplierForm = ref({
+  name: '',
+  contactPerson: '',
+  contactPhone: '',
+})
+
+// 供应商弹窗（摄影）
+const photoSupplierDialogVisible = ref(false)
+const photoSupplierForm = ref({
+  name: '',
+  contactPerson: '',
+  contactPhone: '',
+})
+
+// 供应商弹窗（嘉宾入住）
+const guestStaySupplierDialogVisible = ref(false)
+const guestStaySupplierForm = ref({
+  name: '',
+  contactPerson: '',
+  contactPhone: '',
+})
+
+// 供应商弹窗（接送安排）
+const transportSupplierDialogVisible = ref(false)
+const transportSupplierForm = ref({
+  name: '',
+  contactPerson: '',
+  contactPhone: '',
+})
+
 // 照片管理相关
 const imageManagerVisible = ref(false)
 const currentHall = ref<HallItem | null>(null)
@@ -1492,6 +2456,55 @@ const getDesignStatusType = (status: string) => {
     已完成: 'success',
   }
   return map[status] || 'info'
+}
+const getBuildStatusType = (status: string) => {
+  const map: Record<string, string> = {
+    待搭建: 'info',
+    进行中: 'warning',
+    已确认: 'success',
+    已搭建: 'primary',
+    已完成: 'success',
+  }
+  return map[status] || 'info'
+}
+const getPhotoStatusType = (status: string) => {
+  const map: Record<string, string> = {
+    商讨中: 'warning',
+    已确认: 'success',
+  }
+  return map[status] || 'info'
+}
+const getGuestStayStatusType = (status: string) => {
+  const map: Record<string, string> = {
+    待入住: 'info',
+    已入住: 'success',
+    已退房: 'warning',
+  }
+  return map[status] || 'info'
+}
+const getTransportStatusType = (status: string) => {
+  const map: Record<string, string> = {
+    待安排: 'info',
+    已安排: 'success',
+    已完成: 'success',
+  }
+  return map[status] || 'info'
+}
+const calculateBuildTotalPrice = () => {
+  buildForm.value.totalPrice = buildForm.value.unitPrice * buildForm.value.quantity
+}
+const calculateGuestStayDaysAndTotal = () => {
+  if (guestStayForm.value.checkInDate && guestStayForm.value.checkOutDate) {
+    const start = new Date(guestStayForm.value.checkInDate)
+    const end = new Date(guestStayForm.value.checkOutDate)
+    const diffTime = Math.abs(end.getTime() - start.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    guestStayForm.value.days = diffDays > 0 ? diffDays : 1
+    guestStayForm.value.totalPrice = guestStayForm.value.days * guestStayForm.value.roomPrice
+  }
+}
+const calculateGuestStayTotalPrice = () => {
+  guestStayForm.value.totalPrice = guestStayForm.value.days * guestStayForm.value.roomPrice
 }
 
 // 标签切换
@@ -1837,6 +2850,459 @@ const resetDesignForm = () => {
   designFormRef.value?.clearValidate()
 }
 
+// 搭建事项操作
+const handleImportBuildExcel = () => ElMessage.info('导入Excel功能开发中')
+const handleDeleteBuildImport = () =>
+  ElMessageBox.confirm('确定删除所有导入的搭建事项？', '提示', { type: 'warning' })
+    .then(() => {
+      buildList.value = buildList.value.filter((item) => item.id <= 5)
+      ElMessage.success('已删除导入事项')
+    })
+    .catch(() => {})
+const openAddBuildDialog = () => {
+  buildDialogTitle.value = '新增搭建事项'
+  editingBuildIndex.value = null
+  resetBuildForm()
+  buildDialogVisible.value = true
+}
+const openEditBuildDialog = (row: BuildItem, index: number) => {
+  buildDialogTitle.value = '编辑搭建事项'
+  editingBuildIndex.value = index
+  buildForm.value = {
+    itemName: row.itemName,
+    description: row.description,
+    unit: row.unit,
+    unitPrice: row.unitPrice,
+    quantity: row.quantity,
+    totalPrice: row.totalPrice,
+    status: row.status,
+    contactPerson: row.contactPerson,
+    contactPhone: row.contactPhone,
+    builderName: row.builderName,
+    remark: row.remark,
+  }
+  buildDialogVisible.value = true
+}
+const deleteBuildItem = (index: number) => {
+  ElMessageBox.confirm(`确定删除"${buildList.value[index].itemName}"？`, '提示', {
+    type: 'warning',
+  })
+    .then(() => {
+      buildList.value.splice(index, 1)
+      ElMessage.success('删除成功')
+    })
+    .catch(() => {})
+}
+const saveBuildItem = async () => {
+  if (!buildFormRef.value) return
+  await buildFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const newItem: BuildItem = {
+        id:
+          editingBuildIndex.value !== null
+            ? buildList.value[editingBuildIndex.value].id
+            : Math.max(...buildList.value.map((i) => i.id), 0) + 1,
+        itemName: buildForm.value.itemName,
+        description: buildForm.value.description,
+        unit: buildForm.value.unit,
+        unitPrice: buildForm.value.unitPrice,
+        quantity: buildForm.value.quantity,
+        totalPrice: buildForm.value.totalPrice,
+        status: buildForm.value.status,
+        contactPerson: buildForm.value.contactPerson,
+        contactPhone: buildForm.value.contactPhone,
+        builderName: buildForm.value.builderName,
+        remark: buildForm.value.remark,
+      }
+      if (editingBuildIndex.value !== null) {
+        buildList.value[editingBuildIndex.value] = newItem
+        ElMessage.success('编辑成功')
+      } else {
+        buildList.value.push(newItem)
+        ElMessage.success('新增成功')
+      }
+      buildDialogVisible.value = false
+    }
+  })
+}
+const resetBuildForm = () => {
+  buildForm.value = {
+    itemName: '',
+    description: '',
+    unit: '',
+    unitPrice: 0,
+    quantity: 1,
+    totalPrice: 0,
+    status: '',
+    contactPerson: '',
+    contactPhone: '',
+    builderName: buildSupplierName.value,
+    remark: '',
+  }
+  buildFormRef.value?.clearValidate()
+}
+
+// 供应商操作（搭建）
+const openSupplierDialog = () => {
+  supplierForm.value = {
+    name: buildSupplierName.value,
+    contactPerson: '',
+    contactPhone: '',
+  }
+  supplierDialogVisible.value = true
+}
+const saveSupplier = () => {
+  if (supplierForm.value.name) {
+    // 更新所有搭建事项的供应商名称
+    buildList.value.forEach((item) => {
+      item.builderName = supplierForm.value.name
+      if (supplierForm.value.contactPerson) {
+        item.contactPerson = supplierForm.value.contactPerson
+      }
+      if (supplierForm.value.contactPhone) {
+        item.contactPhone = supplierForm.value.contactPhone
+      }
+    })
+    ElMessage.success('供应商已更新')
+    supplierDialogVisible.value = false
+  } else {
+    ElMessage.warning('请输入供应商名称')
+  }
+}
+
+// 摄影事项操作
+const handleImportPhotoExcel = () => ElMessage.info('导入Excel功能开发中')
+const handleDeletePhotoImport = () =>
+  ElMessageBox.confirm('确定删除所有导入的摄影事项？', '提示', { type: 'warning' })
+    .then(() => {
+      photoList.value = photoList.value.filter((item) => item.id <= 3)
+      ElMessage.success('已删除导入事项')
+    })
+    .catch(() => {})
+const openAddPhotoDialog = () => {
+  photoDialogTitle.value = '新增摄影事项'
+  editingPhotoIndex.value = null
+  resetPhotoForm()
+  photoDialogVisible.value = true
+}
+const openEditPhotoDialog = (row: PhotoItem, index: number) => {
+  photoDialogTitle.value = '编辑摄影事项'
+  editingPhotoIndex.value = index
+  photoForm.value = {
+    itemName: row.itemName,
+    description: row.description,
+    supplierName: row.supplierName,
+    contactPerson: row.contactPerson,
+    contactPhone: row.contactPhone,
+    price: row.price,
+    status: row.status,
+    remark: row.remark,
+  }
+  photoDialogVisible.value = true
+}
+const deletePhotoItem = (index: number) => {
+  ElMessageBox.confirm(`确定删除"${photoList.value[index].itemName}"？`, '提示', {
+    type: 'warning',
+  })
+    .then(() => {
+      photoList.value.splice(index, 1)
+      ElMessage.success('删除成功')
+    })
+    .catch(() => {})
+}
+const savePhotoItem = async () => {
+  if (!photoFormRef.value) return
+  await photoFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const newItem: PhotoItem = {
+        id:
+          editingPhotoIndex.value !== null
+            ? photoList.value[editingPhotoIndex.value].id
+            : Math.max(...photoList.value.map((i) => i.id), 0) + 1,
+        itemName: photoForm.value.itemName,
+        description: photoForm.value.description,
+        supplierName: photoForm.value.supplierName,
+        contactPerson: photoForm.value.contactPerson,
+        contactPhone: photoForm.value.contactPhone,
+        price: photoForm.value.price,
+        status: photoForm.value.status,
+        remark: photoForm.value.remark,
+      }
+      if (editingPhotoIndex.value !== null) {
+        photoList.value[editingPhotoIndex.value] = newItem
+        ElMessage.success('编辑成功')
+      } else {
+        photoList.value.push(newItem)
+        ElMessage.success('新增成功')
+      }
+      photoDialogVisible.value = false
+    }
+  })
+}
+const resetPhotoForm = () => {
+  photoForm.value = {
+    itemName: '',
+    description: '',
+    supplierName: photoSupplierName.value,
+    contactPerson: '',
+    contactPhone: '',
+    price: 0,
+    status: '',
+    remark: '',
+  }
+  photoFormRef.value?.clearValidate()
+}
+
+// 供应商操作（摄影）
+const openPhotoSupplierDialog = () => {
+  photoSupplierForm.value = {
+    name: photoSupplierName.value,
+    contactPerson: '',
+    contactPhone: '',
+  }
+  photoSupplierDialogVisible.value = true
+}
+const savePhotoSupplier = () => {
+  if (photoSupplierForm.value.name) {
+    // 更新所有摄影事项的供应商名称
+    photoList.value.forEach((item) => {
+      item.supplierName = photoSupplierForm.value.name
+      if (photoSupplierForm.value.contactPerson) {
+        item.contactPerson = photoSupplierForm.value.contactPerson
+      }
+      if (photoSupplierForm.value.contactPhone) {
+        item.contactPhone = photoSupplierForm.value.contactPhone
+      }
+    })
+    ElMessage.success('供应商已更新')
+    photoSupplierDialogVisible.value = false
+  } else {
+    ElMessage.warning('请输入供应商名称')
+  }
+}
+
+// 嘉宾入住操作
+const handleImportGuestStayExcel = () => ElMessage.info('导入Excel功能开发中')
+const handleDeleteGuestStayImport = () =>
+  ElMessageBox.confirm('确定删除所有导入的嘉宾入住事项？', '提示', { type: 'warning' })
+    .then(() => {
+      guestStayList.value = guestStayList.value.filter((item) => item.id <= 2)
+      ElMessage.success('已删除导入事项')
+    })
+    .catch(() => {})
+const openAddGuestStayDialog = () => {
+  guestStayDialogTitle.value = '新增嘉宾入住'
+  editingGuestStayIndex.value = null
+  resetGuestStayForm()
+  guestStayDialogVisible.value = true
+}
+const openEditGuestStayDialog = (row: GuestStayItem, index: number) => {
+  guestStayDialogTitle.value = '编辑嘉宾入住'
+  editingGuestStayIndex.value = index
+  guestStayForm.value = {
+    guestName: row.guestName,
+    roomType: row.roomType,
+    roomNumber: row.roomNumber,
+    checkInDate: row.checkInDate,
+    checkOutDate: row.checkOutDate,
+    days: row.days,
+    roomPrice: row.roomPrice,
+    totalPrice: row.totalPrice,
+    status: row.status,
+    contactPhone: row.contactPhone,
+    remark: row.remark,
+  }
+  guestStayDialogVisible.value = true
+}
+const deleteGuestStayItem = (index: number) => {
+  ElMessageBox.confirm(`确定删除"${guestStayList.value[index].guestName}"的入住记录？`, '提示', {
+    type: 'warning',
+  })
+    .then(() => {
+      guestStayList.value.splice(index, 1)
+      ElMessage.success('删除成功')
+    })
+    .catch(() => {})
+}
+const saveGuestStayItem = async () => {
+  if (!guestStayFormRef.value) return
+  await guestStayFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const newItem: GuestStayItem = {
+        id:
+          editingGuestStayIndex.value !== null
+            ? guestStayList.value[editingGuestStayIndex.value].id
+            : Math.max(...guestStayList.value.map((i) => i.id), 0) + 1,
+        guestName: guestStayForm.value.guestName,
+        roomType: guestStayForm.value.roomType,
+        roomNumber: guestStayForm.value.roomNumber,
+        checkInDate: guestStayForm.value.checkInDate,
+        checkOutDate: guestStayForm.value.checkOutDate,
+        days: guestStayForm.value.days,
+        roomPrice: guestStayForm.value.roomPrice,
+        totalPrice: guestStayForm.value.totalPrice,
+        status: guestStayForm.value.status,
+        contactPhone: guestStayForm.value.contactPhone,
+        remark: guestStayForm.value.remark,
+      }
+      if (editingGuestStayIndex.value !== null) {
+        guestStayList.value[editingGuestStayIndex.value] = newItem
+        ElMessage.success('编辑成功')
+      } else {
+        guestStayList.value.push(newItem)
+        ElMessage.success('新增成功')
+      }
+      guestStayDialogVisible.value = false
+    }
+  })
+}
+const resetGuestStayForm = () => {
+  guestStayForm.value = {
+    guestName: '',
+    roomType: '',
+    roomNumber: '',
+    checkInDate: '',
+    checkOutDate: '',
+    days: 1,
+    roomPrice: 0,
+    totalPrice: 0,
+    status: '',
+    contactPhone: '',
+    remark: '',
+  }
+  guestStayFormRef.value?.clearValidate()
+}
+
+// 供应商操作（嘉宾入住）
+const openGuestStaySupplierDialog = () => {
+  guestStaySupplierForm.value = {
+    name: guestStaySupplierName.value,
+    contactPerson: '',
+    contactPhone: '',
+  }
+  guestStaySupplierDialogVisible.value = true
+}
+const saveGuestStaySupplier = () => {
+  if (guestStaySupplierForm.value.name) {
+    // 更新供应商信息（嘉宾入住模块的供应商信息存储）
+    ElMessage.success('供应商已更新')
+    guestStaySupplierDialogVisible.value = false
+  } else {
+    ElMessage.warning('请输入供应商名称')
+  }
+}
+
+// 接送安排操作
+const handleImportTransportExcel = () => ElMessage.info('导入Excel功能开发中')
+const handleDeleteTransportImport = () =>
+  ElMessageBox.confirm('确定删除所有导入的接送安排事项？', '提示', { type: 'warning' })
+    .then(() => {
+      transportList.value = transportList.value.filter((item) => item.id <= 3)
+      ElMessage.success('已删除导入事项')
+    })
+    .catch(() => {})
+const openAddTransportDialog = () => {
+  transportDialogTitle.value = '新增接送安排'
+  editingTransportIndex.value = null
+  resetTransportForm()
+  transportDialogVisible.value = true
+}
+const openEditTransportDialog = (row: TransportItem, index: number) => {
+  transportDialogTitle.value = '编辑接送安排'
+  editingTransportIndex.value = index
+  transportForm.value = {
+    guestName: row.guestName,
+    type: row.type,
+    scheduleTime: row.scheduleTime,
+    departure: row.departure,
+    destination: row.destination,
+    vehicle: row.vehicle,
+    driver: row.driver,
+    driverPhone: row.driverPhone,
+    price: row.price,
+    status: row.status,
+    remark: row.remark,
+  }
+  transportDialogVisible.value = true
+}
+const deleteTransportItem = (index: number) => {
+  ElMessageBox.confirm(`确定删除"${transportList.value[index].guestName}"的接送安排？`, '提示', {
+    type: 'warning',
+  })
+    .then(() => {
+      transportList.value.splice(index, 1)
+      ElMessage.success('删除成功')
+    })
+    .catch(() => {})
+}
+const saveTransportItem = async () => {
+  if (!transportFormRef.value) return
+  await transportFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const newItem: TransportItem = {
+        id:
+          editingTransportIndex.value !== null
+            ? transportList.value[editingTransportIndex.value].id
+            : Math.max(...transportList.value.map((i) => i.id), 0) + 1,
+        guestName: transportForm.value.guestName,
+        type: transportForm.value.type,
+        scheduleTime: transportForm.value.scheduleTime,
+        departure: transportForm.value.departure,
+        destination: transportForm.value.destination,
+        vehicle: transportForm.value.vehicle,
+        driver: transportForm.value.driver,
+        driverPhone: transportForm.value.driverPhone,
+        price: transportForm.value.price,
+        status: transportForm.value.status,
+        remark: transportForm.value.remark,
+      }
+      if (editingTransportIndex.value !== null) {
+        transportList.value[editingTransportIndex.value] = newItem
+        ElMessage.success('编辑成功')
+      } else {
+        transportList.value.push(newItem)
+        ElMessage.success('新增成功')
+      }
+      transportDialogVisible.value = false
+    }
+  })
+}
+const resetTransportForm = () => {
+  transportForm.value = {
+    guestName: '',
+    type: '',
+    scheduleTime: '',
+    departure: '',
+    destination: '',
+    vehicle: '',
+    driver: '',
+    driverPhone: '',
+    price: 0,
+    status: '',
+    remark: '',
+  }
+  transportFormRef.value?.clearValidate()
+}
+
+// 供应商操作（接送安排）
+const openTransportSupplierDialog = () => {
+  transportSupplierForm.value = {
+    name: transportSupplierName.value,
+    contactPerson: '',
+    contactPhone: '',
+  }
+  transportSupplierDialogVisible.value = true
+}
+const saveTransportSupplier = () => {
+  if (transportSupplierForm.value.name) {
+    // 更新供应商信息（接送安排模块的供应商信息存储）
+    ElMessage.success('供应商已更新')
+    transportSupplierDialogVisible.value = false
+  } else {
+    ElMessage.warning('请输入供应商名称')
+  }
+}
+
 // 照片管理操作
 const handleOpenImageManager = (hall: HallItem) => {
   currentHall.value = hall
@@ -1906,23 +3372,6 @@ const confirmSaveImages = () => {
     tempImageList.value = []
   }
 }
-
-// 服务方操作
-const handleAddBuildItem = () =>
-  buildList.value.push({ project: '新项目', spec: '', price: 0, status: '待搭建' })
-const handleAddPhotoItem = () =>
-  photoList.value.push({ project: '新服务', spec: '', price: 0, status: '待确认' })
-const handleAddGuest = () =>
-  guestList.value.push({
-    name: '新嘉宾',
-    roomType: '标准间',
-    roomNumber: '',
-    checkIn: '',
-    checkOut: '',
-    status: '未入住',
-  })
-const handleAddTransport = () =>
-  transportList.value.push({ guest: '', type: '接机', date: '', time: '', route: '', vehicle: '' })
 </script>
 
 <style scoped>
@@ -2551,6 +4000,370 @@ const handleAddTransport = () =>
   color: #8c8f9e;
 }
 
+/* 搭建事项样式 */
+.build-content {
+  width: 100%;
+}
+
+.build-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.build-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.build-header .header-left h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.supplier-info {
+  font-size: 14px;
+  color: #666;
+  background: #f5f7fa;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.supplier-info .supplier-label {
+  color: #999;
+}
+
+.supplier-info .supplier-name {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.change-supplier-btn {
+  margin-left: 8px;
+  padding: 0;
+  color: #1890ff;
+}
+
+.build-header .total-cost-badge {
+  font-size: 14px;
+  color: #666;
+  background: #f5f7fa;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.build-header .total-cost-badge .total-amount {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fa8c16;
+  margin-left: 4px;
+}
+
+.build-header .header-right {
+  display: flex;
+  gap: 12px;
+}
+
+.build-table-wrapper {
+  overflow-x: auto;
+}
+
+.build-table {
+  width: 100%;
+}
+
+.build-table :deep(.el-table__header th) {
+  background-color: #f8f9fa;
+  color: #5a5e6e;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.build-table :deep(.el-table__body td) {
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+/* 摄影事项样式 */
+.photo-content {
+  width: 100%;
+}
+
+.photo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.photo-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.photo-header .header-left h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.photo-header .supplier-info {
+  font-size: 14px;
+  color: #666;
+  background: #f5f7fa;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.photo-header .supplier-info .supplier-label {
+  color: #999;
+}
+
+.photo-header .supplier-info .supplier-name {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.photo-header .change-supplier-btn {
+  margin-left: 8px;
+  padding: 0;
+  color: #1890ff;
+}
+
+.photo-header .total-cost-badge {
+  font-size: 14px;
+  color: #666;
+  background: #f5f7fa;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.photo-header .total-cost-badge .total-amount {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fa8c16;
+  margin-left: 4px;
+}
+
+.photo-header .header-right {
+  display: flex;
+  gap: 12px;
+}
+
+.photo-table-wrapper {
+  overflow-x: auto;
+}
+
+.photo-table {
+  width: 100%;
+}
+
+.photo-table :deep(.el-table__header th) {
+  background-color: #f8f9fa;
+  color: #5a5e6e;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.photo-table :deep(.el-table__body td) {
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+/* 嘉宾入住样式 */
+.guest-stay-content {
+  width: 100%;
+}
+
+.guest-stay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.guest-stay-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.guest-stay-header .header-left h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.guest-stay-header .supplier-info {
+  font-size: 14px;
+  color: #666;
+  background: #f5f7fa;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.guest-stay-header .supplier-info .supplier-label {
+  color: #999;
+}
+
+.guest-stay-header .supplier-info .supplier-name {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.guest-stay-header .change-supplier-btn {
+  margin-left: 8px;
+  padding: 0;
+  color: #1890ff;
+}
+
+.guest-stay-header .total-cost-badge {
+  font-size: 14px;
+  color: #666;
+  background: #f5f7fa;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.guest-stay-header .total-cost-badge .total-amount {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fa8c16;
+  margin-left: 4px;
+}
+
+.guest-stay-header .header-right {
+  display: flex;
+  gap: 12px;
+}
+
+.guest-stay-table-wrapper {
+  overflow-x: auto;
+}
+
+.guest-stay-table {
+  width: 100%;
+}
+
+.guest-stay-table :deep(.el-table__header th) {
+  background-color: #f8f9fa;
+  color: #5a5e6e;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.guest-stay-table :deep(.el-table__body td) {
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+/* 接送安排样式 */
+.transport-content {
+  width: 100%;
+}
+
+.transport-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.transport-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.transport-header .header-left h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.transport-header .supplier-info {
+  font-size: 14px;
+  color: #666;
+  background: #f5f7fa;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.transport-header .supplier-info .supplier-label {
+  color: #999;
+}
+
+.transport-header .supplier-info .supplier-name {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.transport-header .change-supplier-btn {
+  margin-left: 8px;
+  padding: 0;
+  color: #1890ff;
+}
+
+.transport-header .total-cost-badge {
+  font-size: 14px;
+  color: #666;
+  background: #f5f7fa;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.transport-header .total-cost-badge .total-amount {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fa8c16;
+  margin-left: 4px;
+}
+
+.transport-header .header-right {
+  display: flex;
+  gap: 12px;
+}
+
+.transport-table-wrapper {
+  overflow-x: auto;
+}
+
+.transport-table {
+  width: 100%;
+}
+
+.transport-table :deep(.el-table__header th) {
+  background-color: #f8f9fa;
+  color: #5a5e6e;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.transport-table :deep(.el-table__body td) {
+  font-size: 13px;
+  color: #2c3e50;
+}
+
 /* 照片管理弹窗样式 */
 .image-manager {
   padding: 8px;
@@ -2657,17 +4470,6 @@ const handleAddTransport = () =>
   border-radius: 8px;
 }
 
-.service-content,
-.guest-stay-content,
-.transport-content {
-  width: 100%;
-}
-.service-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
 .text-danger {
   color: #ff4d4f;
 }
