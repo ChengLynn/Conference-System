@@ -61,20 +61,20 @@
             <el-menu-item index="/dashboard/meeting/hotel">
               <span>酒店事项</span>
             </el-menu-item>
-            <el-menu-item index="/dashboard/meeting/photography">
+            <!-- <el-menu-item index="/dashboard/meeting/photography">
               <span>搭建摄影</span>
             </el-menu-item>
             <el-menu-item index="/dashboard/meeting/design">
               <span>设计进度</span>
             </el-menu-item>
-            <el-menu-item index="/dashboard/meeting/signup">
-              <span>报名情况</span>
-            </el-menu-item>
             <el-menu-item index="/dashboard/meeting/invitation">
               <span>嘉宾邀请</span>
+            </el-menu-item> -->
+            <el-menu-item index="/dashboard/meeting/signup">
+              <span>参会人员</span>
             </el-menu-item>
             <el-menu-item index="/dashboard/meeting/seating">
-              <span>座位安排</span>
+              <span>座位排布</span>
             </el-menu-item>
             <el-menu-item index="/dashboard/meeting/sponsor">
               <span>会议赞助</span>
